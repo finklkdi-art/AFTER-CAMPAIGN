@@ -1,0 +1,215 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Black+Han+Sans&family=Gothic+A1:wght@400;500;700;900&display=swap');
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #EDE7DA; }
+    .cv { width: 1440px; min-height: 1460px; background: #F3EEE4; color: #17140F;
+          font-family: "Gothic A1", system-ui, sans-serif; }
+    .disp { font-family: "Bricolage Grotesque", sans-serif; }
+    .ic { width: 17px; height: 17px; flex: 0 0 auto; }
+
+    .nav { display: flex; align-items: center; gap: 20px; padding: 20px 48px; border-bottom: 2px solid #17140F; }
+    .logo { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 20px; }
+    .logo sup { font-size: 10px; }
+    .navlinks { display: flex; gap: 26px; margin-left: 26px; font-size: 14px; font-weight: 700; }
+    .navlinks a { color: #17140F; text-decoration: none; opacity: .55; }
+    .nav-r { margin-left: auto; }
+    .pill { border: 2px solid #17140F; border-radius: 40px; padding: 9px 16px; font-size: 13px; font-weight: 700; }
+
+    .steps { display: flex; align-items: center; gap: 10px; padding: 22px 48px 0; }
+    .sp { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 14px; opacity: .4; }
+    .sp .n { width: 28px; height: 28px; border: 2px solid #17140F; border-radius: 50%; display: inline-flex;
+             align-items: center; justify-content: center; font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 13px; }
+    .sp.on { opacity: 1; } .sp.on .n { background: #2B2BF5; color: #fff; }
+    .sp.done .n { background: #C6F24E; }
+    .steps .ln { width: 34px; height: 2px; background: #17140F; opacity: .25; }
+    .sp svg { width: 15px; height: 15px; }
+
+    .pad { padding: 26px 48px 48px; }
+    .kick { font-family: "Bricolage Grotesque"; font-weight: 700; font-size: 13px; letter-spacing: .18em;
+            text-transform: uppercase; margin: 6px 0 10px; }
+    h1 { font-family: "Black Han Sans"; font-weight: 400; font-size: 52px; line-height: 1; margin: 0 0 10px; }
+    .lead { font-weight: 700; font-size: 16px; opacity: .65; margin: 0 0 26px; }
+
+    .cols { display: grid; grid-template-columns: 1.15fr 1fr; gap: 24px; }
+    .panel { background: #F3EEE4; border: 2px solid #17140F; border-radius: 20px; padding: 22px 24px;
+             box-shadow: 6px 6px 0 #17140F; margin-bottom: 22px; }
+    .panel h3 { font-family: "Black Han Sans"; font-size: 21px; margin: 0 0 3px; }
+    .panel .ps { font-weight: 700; font-size: 13px; opacity: .5; margin: 0 0 16px; }
+    .edit { margin-left: auto; font-weight: 800; font-size: 13px; border: 2px solid #17140F; border-radius: 30px;
+            padding: 5px 12px; }
+    .ph { display: flex; align-items: center; }
+
+    .kv { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .kv .f { display: flex; flex-direction: column; gap: 6px; }
+    .kv label { font-weight: 800; font-size: 12px; opacity: .55; }
+    .kv .v { border: 2px solid #17140F; border-radius: 12px; background: #F8F4EC; padding: 11px 13px;
+             font-weight: 700; font-size: 15px; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 9px; }
+    .chip { border: 2px solid #17140F; border-radius: 30px; padding: 8px 14px; font-weight: 700; font-size: 14px;
+            display: inline-flex; align-items: center; gap: 8px; }
+    .chip.on { background: #2B2BF5; color: #fff; }
+    .chip.off { opacity: .4; }
+    .chip .dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid currentColor; }
+    .chip.on .dot { background: #fff; border-color: #fff; }
+
+    .rowline { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 2px solid rgba(23,20,15,.1); }
+    .rowline:last-child { border-bottom: 0; }
+    .rowline .rl { font-weight: 800; font-size: 15px; }
+    .rowline .rr { margin-left: auto; font-weight: 700; font-size: 14px; opacity: .7; }
+
+    .stack { display: flex; height: 58px; border: 2px solid #17140F; border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+    .stack > div { display: flex; align-items: center; justify-content: center; font-family: "Bricolage Grotesque";
+                   font-weight: 800; font-size: 15px; border-right: 2px solid #17140F; }
+    .stack > div:last-child { border-right: 0; }
+
+    .vs { display: flex; align-items: flex-end; gap: 14px; height: 170px; margin-top: 6px; }
+    .vg { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .vpair { display: flex; align-items: flex-end; gap: 5px; height: 140px; }
+    .vb { width: 20px; border: 2px solid #17140F; border-radius: 5px 5px 0 0; }
+    .vb.p { background: #F3EEE4; } .vb.a { background: #2B2BF5; }
+    .vg .vn { font-weight: 700; font-size: 12px; }
+
+    .more { display: flex; align-items: center; gap: 8px; border: 2px solid #17140F; border-radius: 12px;
+            padding: 12px 15px; font-weight: 800; font-size: 14px; background: #F8F4EC; }
+    .more svg { margin-left: auto; width: 18px; height: 18px; }
+
+    .warn { display: flex; gap: 12px; border: 2px solid #17140F; border-radius: 16px; background: #FFB84D;
+            padding: 16px 18px; margin: 22px 0; }
+    .warn b { font-family: "Black Han Sans"; font-size: 17px; display: block; margin-bottom: 3px; }
+    .warn p { margin: 0; font-weight: 700; font-size: 13.5px; line-height: 1.5; }
+
+    .foot { display: flex; align-items: center; gap: 16px; }
+    .foot .note { font-weight: 700; font-size: 13px; opacity: .5; }
+    .go { margin-left: auto; display: inline-flex; align-items: center; gap: 10px; height: 58px; padding: 0 30px;
+          border: 2px solid #17140F; border-radius: 16px; background: #FF5A38; color: #fff;
+          font-family: "Black Han Sans"; font-size: 20px; box-shadow: 5px 5px 0 #17140F; }
+  </style>
+</helmet>
+
+<div class="cv">
+  <div class="nav">
+    <div class="logo">AFTER CAMPAIGN<sup>®</sup></div>
+    <div class="navlinks"><a href="#">성적표</a><a href="#">업로드</a><a href="#">리포트</a><a href="#">체크리스트</a></div>
+    <div class="nav-r"><span class="pill">썸머 스파클 2026</span></div>
+  </div>
+
+  <div class="steps">
+    <div class="sp done"><span class="n"><svg viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>업로드</div><span class="ln"></span>
+    <div class="sp on"><span class="n">2</span>검증</div><span class="ln"></span>
+    <div class="sp"><span class="n">3</span>리포트</div><span class="ln"></span>
+    <div class="sp"><span class="n">4</span>미리보기</div>
+  </div>
+
+  <div class="pad">
+    <div class="kick">Step 02 — Verify</div>
+    <h1>뼈대만 확정해 주세요.</h1>
+    <p class="lead">세세한 수치까지 안 보셔도 돼요. 큰 틀 다섯 가지만 맞으면 리포트로 넘어가요.</p>
+
+    <div class="cols">
+      <!-- left: macro confirm -->
+      <div>
+        <div class="panel">
+          <div class="ph"><h3>캠페인 개요</h3><span class="edit">직접 입력</span></div>
+          <p class="ps">표지에 들어가요. 폴더명이 아니라 확정값이에요.</p>
+          <div class="kv">
+            <div class="f"><label>캠페인명</label><div class="v">썸머 스파클 2026</div></div>
+            <div class="f"><label>광고주</label><div class="v">델라이트</div></div>
+            <div class="f"><label>품목</label><div class="v">제로 스파클링</div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>집행 기간 · 스케줄</h3>
+          <p class="ps">제안 대비 종료가 3일 당겨졌어요.</p>
+          <div class="rowline"><span class="rl">제안 기간</span><span class="rr">2026.05.06 – 07.03</span></div>
+          <div class="rowline"><span class="rl">실집행 기간</span><span class="rr">2026.05.06 – 06.30 · 8주</span></div>
+        </div>
+
+        <div class="panel">
+          <div class="ph"><h3>매체 종류</h3><span class="edit">토글</span></div>
+          <p class="ps">차트에 넣을 매체를 켜고 꺼요.</p>
+          <div class="chips">
+            <span class="chip on"><span class="dot"></span>유튜브</span>
+            <span class="chip on"><span class="dot"></span>네이버 GFA</span>
+            <span class="chip on"><span class="dot"></span>메타</span>
+            <span class="chip on"><span class="dot"></span>카카오모먼트</span>
+            <span class="chip on"><span class="dot"></span>틱톡</span>
+            <span class="chip off"><span class="dot"></span>당근</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>소재 리스트</h3>
+          <p class="ps">온에어된 크리에이티브 5종이에요.</p>
+          <div class="chips">
+            <span class="chip">티저 영상</span><span class="chip">메인 필름</span>
+            <span class="chip">제품 컷</span><span class="chip">인플루언서</span><span class="chip">리타겟팅 배너</span>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-bottom:0">
+          <h3>전략 · 목적</h3>
+          <p class="ps">기획 의도예요. 리포트 인사이트의 기준이 돼요.</p>
+          <div class="rowline"><span class="rl">주 목표</span><span class="rr">신제품 인지 확보 · 여름 성수기 판매 전환</span></div>
+          <div class="rowline"><span class="rl">핵심 타겟</span><span class="rr">2534 · 편의점 음료 헤비유저</span></div>
+        </div>
+      </div>
+
+      <!-- right: charts -->
+      <div>
+        <div class="panel">
+          <h3>매체별 예산 비중</h3>
+          <p class="ps">토글을 바꾸면 바로 다시 그려요.</p>
+          <div class="stack">
+            <div style="flex:33;background:#2B2BF5;color:#fff">33%</div>
+            <div style="flex:25;background:#FF5A38;color:#fff">25%</div>
+            <div style="flex:19;background:#C6F24E">19%</div>
+            <div style="flex:15;background:#8B7CF6;color:#fff">15%</div>
+            <div style="flex:8;background:#FFB84D">8</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>계획 vs 실집행</h3>
+          <p class="ps">비어 있는 건 계획, 파란 건 실집행이에요. (억 원)</p>
+          <div class="vs">
+            <div class="vg"><div class="vpair"><div class="vb p" style="height:135px"></div><div class="vb a" style="height:130px"></div></div><div class="vn">유튜브</div></div>
+            <div class="vg"><div class="vpair"><div class="vb p" style="height:100px"></div><div class="vb a" style="height:98px"></div></div><div class="vn">네이버</div></div>
+            <div class="vg"><div class="vpair"><div class="vb p" style="height:76px"></div><div class="vb a" style="height:72px"></div></div><div class="vn">메타</div></div>
+            <div class="vg"><div class="vpair"><div class="vb p" style="height:58px"></div><div class="vb a" style="height:57px"></div></div><div class="vn">카카오</div></div>
+            <div class="vg"><div class="vpair"><div class="vb p" style="height:34px"></div><div class="vb a" style="height:33px"></div></div><div class="vn">틱톡</div></div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-bottom:0">
+          <h3>세부 수치</h3>
+          <p class="ps">교정은 강제하지 않아요. 필요할 때만 펼쳐 보세요.</p>
+          <div class="more">일자별 · 매체별 상세 보기<svg viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="warn">
+      <svg class="ic" style="width:22px;height:22px;margin-top:2px" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <div><b>캠페인 총계와 매체별 합계가 달라요</b><p>총계 4.82억 vs 매체별 합계 4.71억 — 매체로 안 쪼개진 집행분이 있어서예요. 한쪽을 고르지 않고 둘 다 리포트에 남겨요.</p></div>
+    </div>
+
+    <div class="foot">
+      <span class="note">확인 안 한 항목은 체크리스트에 '미확인'으로 남겨요.</span>
+      <button class="go">검증 완료 · 리포트 만들기<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

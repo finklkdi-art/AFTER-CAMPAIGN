@@ -1,0 +1,15 @@
+{
+  "_comment": "AFTER 웹 배포 설정 — AE가 코드 수정 없이 조정 (claude.md 1.1). 2026.09 외부 호스팅 전환.",
+
+  "_session_ttl_minutes": "세션 무활동 후 샌드박스를 자동 파기하기까지의 분. 무료 서버 RAM·잔존 최소화를 위해 짧게 둔다.",
+  "session_ttl_minutes": 30,
+
+  "_purge_pptx_after_download": "true 면 내려받기 버튼 생성 직후 서버의 PPTX 사본을 삭제 (하드디스크 잔존 0)",
+  "purge_pptx_after_download": true,
+
+  "_purge_uploads_after_report": "true 면 3단계(리포트) 진입 시 업로드 원본을 파기. 파싱 결과는 인메모리 knowledge 에 있어 재렌더에 지장 없음.",
+  "purge_uploads_after_report": true,
+
+  "_link_input_folder": "외부 호스팅에서는 서버에 캠페인 폴더가 없으므로 false. 업로드 경로만 쓴다.",
+  "link_input_folder": false
+}

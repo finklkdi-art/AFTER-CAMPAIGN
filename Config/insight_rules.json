@@ -1,0 +1,87 @@
+{
+  "version": "1.0",
+  "_comment": [
+    "Stage 3 인사이트 도출 규칙의 임계값과 키워드. 코드 수정 없이 AE가 조정 가능.",
+    "임계값을 낮추면 인사이트가 늘지만 근거가 약한 문장이 섞일 수 있음.",
+    "min_gap_ratio 는 '두 항목의 효율 차이가 이 배수 이상일 때만 문장화'를 뜻함.",
+    "max_achievement_rate 를 넘는 달성률은 목표 산정 기준 상이로 보아 인사이트에서 제외하고",
+    "Checklist 에 사유를 기재함 (실측: 목표 6만회 대비 실적 562만회 = 9,367% 사례 존재)."
+  ],
+
+  "thresholds": {
+    "min_impressions": 5000,
+    "min_views": 500,
+    "min_clicks": 50,
+    "min_spend": 300000,
+    "min_gap_ratio": 1.10,
+    "min_compare_items": 2,
+    "min_daily_rows": 5,
+    "min_stage_gap": 0.10,
+    "min_share_lift": 0.05,
+    "max_achievement_rate": 5.0,
+    "min_achievement_items": 2,
+    "max_insights": 99,
+    "max_per_axis": 99,
+    "max_evidence_per_insight": 5,
+    "max_strategy_items": 4
+  },
+
+  "media_kind": {
+    "_comment": "영상형/배너형 판정 — 조회수와 VTR 이 유효하면 영상형으로 본다",
+    "video_min_views": 1000,
+    "video_primary_metric": "cpv",
+    "video_quality_metric": "vtr",
+    "banner_primary_metric": "cpc",
+    "banner_quality_metric": "ctr"
+  },
+
+  "_targeting_types_comment": [
+    "위에 적은 유형이 먼저 판정됨(앞선 항목 우선). 데모는 반드시 마지막에 둘 것.",
+    "실측 표기 'MF3554∩관심사+구매의도' 처럼 관심사 라인에도 MF#### 데모 표기가",
+    "함께 붙으므로, 데모를 먼저 검사하면 관심사 라인이 데모로 오분류됨."
+  ],
+  "targeting_types": {
+    "리타겟팅": ["리타겟", "retarget", "rmk", "재방문"],
+    "관심사": ["관심사", "구매의도", "interest", "affinity", "인텐트"],
+    "고소득": ["고소득", "직장인", "프리미엄"],
+    "논타겟": ["논타겟", "non-target", "nontarget"],
+    "데모": ["mf", "데모", "demo", "연령", "성별", "남녀"]
+  },
+
+  "event_keywords": {
+    "소재": ["소재", "러닝체인지", "러닝 체인지", "교체", "편 추가", "크리에이티브"],
+    "종료": ["종료", "완료"],
+    "라이브": ["라이브", "온에어", "시작"],
+    "추가물량": ["보너스", "무상", "추가노출", "추가 물량", "미디어 보너스"]
+  },
+
+  "phase_pattern": "phase\\s*([0-9]+)|([0-9]+)\\s*차\\s*캠페인",
+
+  "media_display": {
+    "_comment": [
+      "슬라이드 문장에 넣을 매체명 표기 규칙. 데이터의 원본 표기는 그대로 보존하고,",
+      "문장에서만 매체군 접두를 떼어낸다. 앞선 패턴이 먼저 적용되고 하나만 적용됨.",
+      "  1) 'OTT - 티빙' / 'Digital (MO) - 토스_썸네일배너' -> 영문·기호 접두 + 하이픈",
+      "  2) '소상공인특화>카카오뱅크' / '영상>유튜브-CTV논스킵' -> '>' 계층 표기",
+      "하이픈 패턴은 영문·기호 접두로 한정해 '유튜브-CTV논스킵' 같은 매체명은 보존함."
+    ],
+    "strip_group_prefix": true,
+    "group_prefix_patterns": [
+      "^[A-Za-z0-9&()./ ]{2,20}-\\s*",
+      "^[^>]{1,14}>\\s*"
+    ],
+    "max_length": 28
+  },
+
+  "metric_labels": {
+    "vtr": "VTR",
+    "ctr": "CTR",
+    "cpv": "CPV",
+    "cpc": "CPC",
+    "cpm": "CPM",
+    "impressions": "노출",
+    "views": "조회",
+    "clicks": "클릭",
+    "spend": "집행 금액"
+  }
+}

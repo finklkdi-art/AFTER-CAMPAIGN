@@ -1,0 +1,29 @@
+
+
+# Rule Book — API 키·비밀은 저장소에 넣지 않는다
+.env
+.streamlit/secrets.toml
+
+# 산출물 전체 — 실제 캠페인 결과 PPTX 등 고객사 자산이 포함되므로
+# 통째로 제외. 폴더 존재만 유지(.gitkeep)하고 내용물은 절대 올리지 않음
+Output/*
+!Output/.gitkeep
+
+# 클라이언트 자산 원본 (샘플 포함) — 공개 레포에 올리지 않는다
+Input/Samples/
+
+# 삼성 사내 폰트(라이선스 자산) — 공개 저장소이므로 제외.
+# 앱은 폰트가 없으면 시스템 기본 폰트로 자동 대체되므로 기능에는 영향 없음.
+# (설치 안내: Scripts/utils/report/fonts.py 가 미설치 시 경고만 표시)
+Fonts/
+
+# 파이썬 캐시·백업 파일 — 코드 아님, 저장소에 넣을 필요 없음
+__pycache__/
+*.pyc
+*.bak
+*.bak2
+
+# OS·에디터 잡동사니
+.DS_Store
+Thumbs.db
+

@@ -1,0 +1,27 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "컨셉 A · 금융 앱 (미채택)" },
+    { "id": "page-2", "name": "컨셉 B · 광고 트렌디 (확정)" },
+    { "id": "page-3", "name": "컨셉 B · 전체 화면 흐름" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html",       "page": "page-1", "x": 0,    "y": 0, "w": 1440, "h": 1500, "title": "A · 성과 대시보드" },
+    { "file": "Upload_A.dc.html",   "page": "page-1", "x": 1560, "y": 0, "w": 1440, "h": 1010, "title": "A · 자료 업로드" },
+
+    { "file": "Dashboard_B.dc.html","page": "page-2", "x": 0,    "y": 0, "w": 1440, "h": 1580, "title": "B · 캠페인 성적표" },
+    { "file": "Upload_B.dc.html",   "page": "page-2", "x": 1560, "y": 0, "w": 1440, "h": 1060, "title": "B · 자료 업로드" },
+
+    { "file": "Landing_B.dc.html",  "page": "page-3", "x": 0,    "y": 0, "w": 1440, "h": 900,  "title": "① 대문 · 랜딩" },
+    { "file": "Analyzing_B.dc.html","page": "page-3", "x": 1560, "y": 0, "w": 1440, "h": 900,  "title": "② 분석 진행" },
+    { "file": "Verify_B.dc.html",   "page": "page-3", "x": 3120, "y": 0, "w": 1440, "h": 1460, "title": "③ 자료 검증" },
+    { "file": "Generate_B.dc.html", "page": "page-3", "x": 4680, "y": 0, "w": 1440, "h": 1010, "title": "④ 리포트 생성" },
+    { "file": "Preview_B.dc.html",  "page": "page-3", "x": 6240, "y": 0, "w": 1440, "h": 1160, "title": "⑤ 미리보기 · 부분 수정" },
+    { "file": "Checklist_B.dc.html","page": "page-3", "x": 7800, "y": 0, "w": 1440, "h": 1120, "title": "⑥ 체크리스트" }
+  ],
+  "annotations": [
+    { "id": "note-a", "page": "page-1", "x": 0, "y": -150, "w": 560, "text": "컨셉 A · 금융 앱 (미채택 · 참고용)\n토스·머큐리·리니어 계열 핀테크 운영 대시보드. 좌측 계정 내비 + 명세서형 레이아웃, IBM Plex, 단일 인디고 액센트. 최종 방향은 페이지 2(컨셉 B)로 확정했어요." },
+    { "id": "note-b", "page": "page-2", "x": 0, "y": -150, "w": 560, "text": "컨셉 B · 광고 트렌디 (확정된 방향)\n에디토리얼/네오브루탈 '성적표' 컨셉. Black Han Sans + Bricolage, 크림+잉크+코발트/코랄, 두꺼운 보더와 하드 섀도. 왼쪽=성적표 대시보드, 오른쪽=자료 업로드." },
+    { "id": "note-c", "page": "page-3", "x": 0, "y": -190, "w": 760, "text": "컨셉 B · 전체 화면 흐름 (데스크톱)\nPRD.md · design.md 규격으로 그린 신규 화면 6개를 사용 동선 순서로 배치했어요.\n① 대문 → ② 분석 진행 → ③ 자료 검증 → ④ 리포트 생성 → ⑤ 미리보기·부분 수정 → ⑥ 체크리스트.\n자료 업로드와 성과 대시보드(성적표)는 페이지 2(컨셉 B 확정)에 이미 있어서 여기선 다시 그리지 않았어요 — 실제 동선은 ①대문 → (페이지2)업로드 → ②분석 → ③검증 → ④생성 → ⑤미리보기 → (페이지2)성적표 → ⑥체크리스트 순이에요." }
+  ],
+  "launch": { "view": "canvas", "page": "page-3" }
+}

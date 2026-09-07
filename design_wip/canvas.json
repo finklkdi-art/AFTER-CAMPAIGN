@@ -1,0 +1,17 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "컨셉 A · 금융 앱" },
+    { "id": "page-2", "name": "컨셉 B · 광고 트렌디" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html",      "page": "page-1", "x": 0,    "y": 0, "w": 1440, "h": 1500, "title": "A · 성과 대시보드" },
+    { "file": "Upload_A.dc.html",  "page": "page-1", "x": 1560, "y": 0, "w": 1440, "h": 1010, "title": "A · 자료 업로드" },
+    { "file": "Dashboard_B.dc.html","page": "page-2", "x": 0,    "y": 0, "w": 1440, "h": 1580, "title": "B · 캠페인 성적표" },
+    { "file": "Upload_B.dc.html",  "page": "page-2", "x": 1560, "y": 0, "w": 1440, "h": 1060, "title": "B · 자료 업로드" }
+  ],
+  "annotations": [
+    { "id": "note-a", "page": "page-1", "x": 0, "y": -150, "w": 560, "text": "컨셉 A · 금융 앱\n토스·머큐리·리니어 계열 핀테크 운영 대시보드. 좌측 계정 내비 + 명세서형 레이아웃, IBM Plex, 단일 인디고 액센트. 왼쪽=성과 대시보드, 오른쪽=자료 업로드." },
+    { "id": "note-b", "page": "page-2", "x": 0, "y": -150, "w": 560, "text": "컨셉 B · 광고 트렌디\n에디토리얼/네오브루탈 '성적표' 컨셉. Black Han Sans + Bricolage, 크림+잉크+코발트/코랄, 두꺼운 보더와 하드 섀도. 왼쪽=성적표 대시보드, 오른쪽=자료 업로드." }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

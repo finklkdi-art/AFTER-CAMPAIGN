@@ -1,0 +1,263 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Black+Han+Sans&family=Gothic+A1:wght@400;500;700;900&display=swap');
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #EDE7DA; }
+    .cv { width: 1440px; min-height: 1580px; background: #F3EEE4; color: #17140F;
+          font-family: "Gothic A1", system-ui, sans-serif; }
+    .disp { font-family: "Bricolage Grotesque", system-ui, sans-serif; }
+    .kr { font-family: "Black Han Sans", "Gothic A1", sans-serif; font-weight: 400; }
+    .ink { color: #17140F; }
+
+    /* nav */
+    .nav { display: flex; align-items: center; gap: 20px; padding: 20px 48px;
+           border-bottom: 2px solid #17140F; }
+    .logo { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 20px;
+            letter-spacing: -.02em; display: flex; align-items: center; gap: 7px; }
+    .logo sup { font-size: 10px; }
+    .navlinks { display: flex; gap: 26px; margin-left: 26px; font-size: 14px; font-weight: 700; }
+    .navlinks a { color: #17140F; text-decoration: none; opacity: .55; }
+    .navlinks a.on { opacity: 1; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 5px; }
+    .nav-r { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+    .pill { border: 2px solid #17140F; border-radius: 40px; padding: 9px 16px; font-size: 13px;
+            font-weight: 700; display: inline-flex; align-items: center; gap: 8px; background: #F3EEE4; }
+    .pill.coral { background: #FF5A38; color: #fff; box-shadow: 3px 3px 0 #17140F; }
+    .ic { width: 17px; height: 17px; flex: 0 0 auto; }
+
+    .pad { padding: 34px 48px 48px; }
+
+    /* hero */
+    .hero { display: grid; grid-template-columns: 1.55fr 1fr; gap: 24px; margin-bottom: 30px; }
+    .kick { font-family: "Bricolage Grotesque"; font-weight: 700; font-size: 13px; letter-spacing: .18em;
+            text-transform: uppercase; margin: 4px 0 14px; }
+    .hero h1 { font-family: "Black Han Sans"; font-weight: 400; font-size: 74px; line-height: .98;
+               letter-spacing: -.02em; margin: 0 0 22px; }
+    .hero h1 em { font-style: normal; color: #2B2BF5; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag { border: 2px solid #17140F; border-radius: 30px; padding: 7px 14px; font-size: 13px; font-weight: 700; }
+    .tag.fill { background: #17140F; color: #F3EEE4; }
+    .grade-panel { background: #2B2BF5; border: 2px solid #17140F; border-radius: 22px; color: #fff;
+                   box-shadow: 8px 8px 0 #17140F; padding: 26px 28px; position: relative; overflow: hidden;
+                   display: flex; flex-direction: column; justify-content: center; }
+    .grade-panel .lbl { font-weight: 700; font-size: 14px; opacity: .85; }
+    .grade-panel .big { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 118px;
+                        line-height: .9; letter-spacing: -.04em; margin: 6px 0; }
+    .grade-panel .sub { font-weight: 700; font-size: 15px; }
+    .stamp { position: absolute; top: 22px; right: -6px; transform: rotate(9deg);
+             background: #C6F24E; color: #17140F; border: 2px solid #17140F; border-radius: 8px;
+             font-family: "Black Han Sans"; font-size: 18px; padding: 6px 14px; }
+
+    /* kpi */
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 34px; }
+    .kt { background: #F3EEE4; border: 2px solid #17140F; border-radius: 18px; padding: 20px;
+          box-shadow: 5px 5px 0 #17140F; }
+    .kt .kk { font-weight: 700; font-size: 13px; opacity: .6; margin-bottom: 4px; }
+    .kt .kl { font-family: "Gothic A1"; font-weight: 900; font-size: 15px; margin-bottom: 14px; }
+    .kt .kv { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 44px; line-height: 1;
+              letter-spacing: -.03em; }
+    .kt .kv small { font-size: 19px; font-weight: 700; }
+    .kt .kd { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; font-weight: 700;
+              font-size: 13px; padding: 4px 10px; border-radius: 30px; border: 2px solid #17140F; }
+    .kd.up { background: #C6F24E; } .kd.warn { background: #FFB84D; }
+
+    .sec { margin-bottom: 34px; }
+    .sec-t { font-family: "Black Han Sans"; font-size: 30px; margin: 0 0 4px; letter-spacing: -.01em; }
+    .sec-s { font-weight: 700; font-size: 14px; opacity: .55; margin: 0 0 18px; }
+
+    .two { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; }
+    .panel { background: #F3EEE4; border: 2px solid #17140F; border-radius: 20px; padding: 24px 26px;
+             box-shadow: 6px 6px 0 #17140F; }
+    .panel h3 { font-family: "Black Han Sans"; font-size: 22px; margin: 0 0 3px; }
+    .panel .ps { font-weight: 700; font-size: 13px; opacity: .55; margin: 0 0 18px; }
+
+    /* stacked bar */
+    .stack { display: flex; height: 70px; border: 2px solid #17140F; border-radius: 12px; overflow: hidden; }
+    .stack > div { display: flex; align-items: center; justify-content: center;
+                   font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 17px;
+                   border-right: 2px solid #17140F; }
+    .stack > div:last-child { border-right: 0; }
+    .slgd { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 18px; margin-top: 18px; }
+    .slgd .r { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 14px; }
+    .slgd .sw { width: 14px; height: 14px; border: 2px solid #17140F; border-radius: 4px; flex: 0 0 auto; }
+    .slgd .r b { margin-left: auto; font-family: "Bricolage Grotesque"; font-weight: 800; }
+
+    /* vs bars */
+    .vs { display: flex; align-items: flex-end; gap: 16px; height: 200px; }
+    .vg { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 9px; }
+    .vpair { display: flex; align-items: flex-end; gap: 5px; height: 165px; }
+    .vb { width: 24px; border: 2px solid #17140F; border-radius: 5px 5px 0 0; }
+    .vb.p { background: #F3EEE4; }
+    .vb.a { background: #2B2BF5; }
+    .vg .vn { font-weight: 700; font-size: 12.5px; }
+
+    /* roadmap */
+    .rmwk { display: grid; grid-template-columns: 150px repeat(8,1fr); margin-bottom: 10px; }
+    .rmwk span { font-family: "Bricolage Grotesque"; font-weight: 700; font-size: 12px; opacity: .5;
+                 text-align: center; }
+    .rmrow { display: grid; grid-template-columns: 150px 1fr; align-items: center; height: 40px; }
+    .rmrow .rl { font-weight: 900; font-size: 14px; }
+    .rmtrack { position: relative; height: 26px; border-radius: 8px;
+               background: repeating-linear-gradient(90deg,#E7E0D2 0 1px,transparent 1px 12.5%); }
+    .rmbar { position: absolute; height: 26px; border: 2px solid #17140F; border-radius: 8px;
+             display: flex; align-items: center; padding: 0 11px; font-weight: 800; font-size: 12.5px; }
+
+    /* lessons */
+    .lz { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
+    .lc { border: 2px solid #17140F; border-radius: 20px; padding: 22px 24px; box-shadow: 6px 6px 0 #17140F; }
+    .lc.good { background: #C6F24E; }
+    .lc.bad { background: #FF5A38; color: #fff; }
+    .lc.next { background: #2B2BF5; color: #fff; }
+    .lc .lh { font-family: "Black Han Sans"; font-size: 26px; margin-bottom: 12px; }
+    .lc p { font-weight: 700; font-size: 15px; line-height: 1.6; margin: 0; }
+    .lc .big-n { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 40px; line-height: 1;
+                 display: block; margin-bottom: 8px; }
+  </style>
+</helmet>
+
+<div class="cv">
+  <!-- nav -->
+  <div class="nav">
+    <div class="logo">AFTER CAMPAIGN<sup>®</sup></div>
+    <div class="navlinks">
+      <a href="#" class="on">성적표</a><a href="#">업로드</a><a href="#">리포트</a><a href="#">체크리스트</a>
+    </div>
+    <div class="nav-r">
+      <span class="pill">비즈니스 3본부 · AX</span>
+      <span class="pill coral">리포트 만들기
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+      </span>
+    </div>
+  </div><div class="pad">
+    <!-- hero -->
+    <div class="hero">
+      <div>
+        <div class="kick">After Campaign — 결과 리포트</div>
+        <h1>이번 캠페인,<br><em>성적표</em> 나왔어요.</h1>
+        <div class="meta">
+          <span class="tag fill">썸머 스파클 2026</span>
+          <span class="tag">광고주 델라이트</span>
+          <span class="tag">제로 스파클링</span>
+          <span class="tag">2026.05.06 – 06.30 · 8주</span>
+        </div>
+      </div>
+      <div class="grade-panel" style="background-color: #2B2BE2B2">
+        <div class="stamp">초과 달성</div>
+        <div class="lbl">목표 달성률 · 노출 기준</div>
+        <div class="big disp">105%</div>
+        <div class="sub">계획 1.35억 → 실집행 1.42억 회</div>
+      </div>
+    </div>
+
+    <!-- kpi -->
+    <div class="kpis">
+      <div class="kt">
+        <div class="kk disp">01</div>
+        <div class="kl">얼마나 퍼졌나</div>
+        <div class="kv disp">1.42<small>억</small></div>
+        <div class="kd up">총 노출 · 계획 대비 +5.2%</div>
+      </div>
+      <div class="kt">
+        <div class="kk disp">02</div>
+        <div class="kl">몇 번 눌렀나</div>
+        <div class="kv disp">318<small>만</small></div>
+        <div class="kd up">CTR 2.23% · +0.31%p</div>
+      </div>
+      <div class="kt">
+        <div class="kk disp">03</div>
+        <div class="kl">몇 명이 넘어왔나</div>
+        <div class="kv disp">48.2<small>천</small></div>
+        <div class="kd up">전환 · +12.4%</div>
+      </div>
+      <div class="kt">
+        <div class="kk disp">04</div>
+        <div class="kl">얼마나 썼나</div>
+        <div class="kv disp">4.82<small>억</small></div>
+        <div class="kd warn">실집행 · 계획의 96%</div>
+      </div>
+    </div>
+
+    <!-- media + vs -->
+    <div class="sec two">
+      <div class="panel">
+        <h3 style="font-weight: 500">매체, 이렇게 나눠 썼어요</h3>
+        <p class="ps">실집행 예산 기준 매체별 비중이에요.</p>
+        <div class="stack">
+          <div style="flex: 32; color: #fff; background-color: #2B2BF5B4">32%</div>
+          <div style="flex: 24; color: #fff; background-color: #FF8971">24%</div>
+          <div style="flex:18;background:#C6F24E">18%</div>
+          <div style="flex:14;background:#8B7CF6;color:#fff">14%</div>
+          <div style="flex:8;background:#FFB84D">8</div>
+          <div style="flex:4;background:#17140F;color:#fff">4</div>
+        </div>
+        <div class="slgd">
+          <div class="r"><span class="sw" style="background:#2B2BF5"></span>유튜브<b class="disp">32%</b></div>
+          <div class="r"><span class="sw" style="background:#8B7CF6"></span>카카오모먼트<b class="disp">14%</b></div>
+          <div class="r"><span class="sw" style="background:#FF5A38"></span>네이버 GFA<b class="disp">24%</b></div>
+          <div class="r"><span class="sw" style="background:#FFB84D"></span>틱톡<b class="disp">8%</b></div>
+          <div class="r"><span class="sw" style="background:#C6F24E"></span>메타<b class="disp">18%</b></div>
+          <div class="r"><span class="sw" style="background:#17140F"></span>당근<b class="disp">4%</b></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3 style="font-weight: 500">계획 vs 실집행</h3>
+        <p class="ps">비어 있는 건 계획, 파란 건 실집행이에요. (억 원)</p>
+        <div class="vs">
+          <div class="vg"><div class="vpair"><div class="vb p" style="height:160px"></div><div class="vb a" style="height: 155px; background-color: #2B2BF5B3"></div></div><div class="vn">유튜브</div></div>
+          <div class="vg"><div class="vpair"><div class="vb p" style="height:120px"></div><div class="vb a" style="height: 118px; background-color: #2B2BF5B3"></div></div><div class="vn">네이버</div></div>
+          <div class="vg"><div class="vpair"><div class="vb p" style="height:90px"></div><div class="vb a" style="height: 86px; background-color: #2B2BF5B3"></div></div><div class="vn">메타</div></div>
+          <div class="vg"><div class="vpair"><div class="vb p" style="height:70px"></div><div class="vb a" style="height: 68px; background-color: #2B2BF5B3"></div></div><div class="vn">카카오</div></div>
+          <div class="vg"><div class="vpair"><div class="vb p" style="height:40px"></div><div class="vb a" style="height: 39px; background-color: #2B2BF5B3"></div></div><div class="vn">틱톡</div></div>
+          <div class="vg"><div class="vpair"><div class="vb p" style="height:22px"></div><div class="vb a" style="height: 16px; background-color: #2B2BF5B3"></div></div><div class="vn">당근</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- roadmap -->
+    <div class="sec">
+      <h2 class="sec-t" style="font-weight: 400">언제, 뭘 틀었나</h2>
+      <p class="sec-s">기간 × 소재 온에어 로드맵이에요.</p>
+      <div class="panel">
+        <div class="rmwk"><span></span><span>W1</span><span>W2</span><span>W3</span><span>W4</span><span>W5</span><span>W6</span><span>W7</span><span>W8</span></div>
+        <div class="rmrow"><div class="rl" style="font-weight: 600">티저 영상</div><div class="rmtrack"><div class="rmbar" style="left: 0; width: 25%; background: #C6F24E; font-weight: 700; font-size: 14px">유튜브</div></div></div>
+        <div class="rmrow"><div class="rl" style="font-weight: 600">메인 필름</div><div class="rmtrack"><div class="rmbar" style="left: 12.5%; width: 50%; color: #fff; font-weight: 700; font-size: 14px; background-color: #2B2BF5AE">유튜브 · 메타</div></div></div>
+        <div class="rmrow"><div class="rl" style="font-weight: 600">제품 컷</div><div class="rmtrack"><div class="rmbar" style="left: 25%; width: 50%; background: #FFB84D; font-weight: 700; font-size: 14px">네이버 · 카카오</div></div></div>
+        <div class="rmrow"><div class="rl" style="font-weight: 600">인플루언서</div><div class="rmtrack"><div class="rmbar" style="left: 37.5%; width: 25%; color: #fff; font-weight: 700; font-size: 14px; background-color: #FF5A38B2">틱톡</div></div></div>
+        <div class="rmrow"><div class="rl" style="font-weight: 600">리타겟팅</div><div class="rmtrack"><div class="rmbar" style="left: 62.5%; width: 37.5%; background: #17140F; color: #fff; font-weight: 700; font-size: 14px">전 매체</div></div></div>
+      </div>
+    </div>
+
+    <!-- lessons -->
+    <div class="sec">
+      <h2 class="sec-t" style="font-weight: 500">그래서, 다음엔?</h2>
+      <p class="sec-s">Lesson-Learned와 차기 전략이에요.</p>
+      <div class="lz">
+        <div class="lc good">
+          <div class="lh">이건 잘했어요</div>
+          <p><span class="big-n disp">118%</span>유튜브 CTR이 목표의 118%. 다음엔 예산 비중을 더 실어 볼 만해요.</p>
+        </div>
+        <div class="lc bad" style="background-color: #FF5A38AF">
+          <div class="lh">이건 아쉬웠어요</div>
+          <p><span class="big-n disp">당근</span>노출은 채웠지만 전환 기여가 낮았어요. 소재 교체나 타겟 재설정이 필요해요.</p>
+        </div>
+        <div class="lc next" style="background-color: #2B2BF5B5">
+          <div class="lh">다음엔 이렇게</div>
+          <p><span class="big-n disp">41%</span>리타겟팅이 후반 2주에 전환의 41%를 만들었어요. 투입을 앞당겨 봐요.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+</div>
+</x-dc>
+</body>
+</html>

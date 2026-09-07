@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "lucide-icons": {
+      "command": "python",
+      "args": [
+        "Scripts/mcp/lucide_icons_server.py"
+      ],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    }
+  }
+}

@@ -1,0 +1,341 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #EEF1F6; }
+    .cv { width: 1440px; min-height: 1500px; display: flex;
+          font-family: "IBM Plex Sans KR", system-ui, sans-serif;
+          color: #0B1524; background: #EEF1F6; letter-spacing: -.01em; }
+    .num { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+    a { color: #4F46E5; text-decoration: none; }
+    a:hover { color: #3730A3; }
+    .ic { width: 18px; height: 18px; flex: 0 0 auto; }
+    .ic-sm { width: 16px; height: 16px; flex: 0 0 auto; }
+
+    /* ── sidebar ── */
+    .side { width: 240px; flex: 0 0 240px; background: #0B1524; color: #C3CAD9;
+            padding: 26px 16px; display: flex; flex-direction: column; gap: 4px; }
+    .brand { display: flex; flex-direction: column; gap: 1px; padding: 4px 10px 22px; }
+    .brand b { font-size: 18px; font-weight: 700; letter-spacing: .06em; color: #fff; line-height: 1.05; }
+    .brand b .a { color: #A5B4FC; }
+    .brand small { font-size: 11px; letter-spacing: .22em; color: #5B6577; font-weight: 500; }
+    .nav-h { font-size: 11px; font-weight: 600; letter-spacing: .12em; color: #56607a;
+             padding: 16px 12px 6px; }
+    .nav { display: flex; align-items: center; gap: 11px; padding: 10px 12px;
+           border-radius: 10px; font-size: 14px; font-weight: 500; color: #9AA3B7; cursor: pointer; }
+    .nav:hover { background: #141F33; color: #E7EAF2; }
+    .nav.on { background: #4F46E5; color: #fff; font-weight: 600; }
+    .side-foot { margin-top: auto; padding-top: 16px; border-top: 1px solid #1B263C; }
+    .acct { display: flex; align-items: center; gap: 10px; padding: 8px 10px; }
+    .ava { width: 34px; height: 34px; border-radius: 9px; background: #26314B; color: #A5B4FC;
+           display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+    .acct .t b { display: block; font-size: 13px; color: #E7EAF2; font-weight: 600; }
+    .acct .t span { font-size: 11px; color: #5B6577; }
+
+    /* ── main ── */
+    .main { flex: 1 1 auto; min-width: 0; }
+    .top { height: 62px; background: #fff; border-bottom: 1px solid #E4E8F0;
+           display: flex; align-items: center; gap: 14px; padding: 0 28px; }
+    .camp { display: flex; align-items: center; gap: 10px; padding: 7px 13px;
+            border: 1px solid #E4E8F0; border-radius: 10px; font-size: 14px; font-weight: 600; }
+    .camp .dot { width: 8px; height: 8px; border-radius: 50%; background: #059669; }
+    .top-chip { font-size: 12.5px; color: #667085; padding: 6px 11px; background: #F2F4F8;
+                border-radius: 8px; font-weight: 500; }
+    .top-r { margin-left: auto; display: flex; align-items: center; gap: 8px; color: #667085; }
+    .icbtn { width: 38px; height: 38px; border-radius: 10px; border: 1px solid #E4E8F0;
+             background: #fff; display: flex; align-items: center; justify-content: center; }
+
+    .body { padding: 26px 28px 40px; }
+    .head { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 22px; }
+    .head h1 { font-size: 25px; font-weight: 700; margin: 0 0 5px; letter-spacing: -.03em; }
+    .head p { margin: 0; font-size: 13.5px; color: #667085; }
+    .head .sp { margin-left: auto; display: flex; gap: 10px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 17px;
+           border-radius: 11px; font-size: 14px; font-weight: 600; border: 1px solid #E4E8F0;
+           background: #fff; color: #101828; cursor: pointer; }
+    .btn.pri { background: #4F46E5; color: #fff; border-color: #4F46E5; }
+    .btn.pri:hover { background: #4338CA; }
+
+    .grid { display: grid; gap: 16px; }
+    .k5 { grid-template-columns: repeat(5, 1fr); margin-bottom: 16px; }
+    .card { background: #fff; border: 1px solid #E4E8F0; border-radius: 16px; padding: 18px 20px; }
+    .kpi .lab { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: #667085; font-weight: 500; }
+    .kpi .val { font-size: 26px; font-weight: 600; margin: 12px 0 8px; letter-spacing: -.02em; }
+    .kpi .val small { font-size: 14px; color: #98A2B3; font-weight: 500; }
+    .delta { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600;
+             padding: 3px 8px; border-radius: 7px; }
+    .up { background: #ECFDF3; color: #059669; }
+    .down { background: #FEF3F2; color: #DC2626; }
+    .flat { background: #F2F4F8; color: #667085; }
+
+    .row2 { display: grid; grid-template-columns: 1.9fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .row3 { display: grid; grid-template-columns: 1.9fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .ct-h { display: flex; align-items: center; gap: 9px; margin-bottom: 4px; }
+    .ct-h h3 { font-size: 15.5px; font-weight: 700; margin: 0; letter-spacing: -.02em; }
+    .ct-h .badge { margin-left: auto; font-size: 12px; font-weight: 600; color: #4F46E5;
+                   background: #EEF0FF; padding: 4px 9px; border-radius: 7px; }
+    .ct-sub { font-size: 12.5px; color: #98A2B3; margin: 0 0 16px; }
+
+    /* gantt */
+    .gantt { display: flex; flex-direction: column; gap: 9px; }
+    .wk { display: grid; grid-template-columns: repeat(8, 1fr); margin: 2px 0 8px; }
+    .wk span { font-size: 11px; color: #98A2B3; text-align: center; font-weight: 500;
+               border-left: 1px solid #EDF0F5; padding-bottom: 4px; }
+    .grow { position: relative; height: 30px; }
+    .glab { position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+            font-size: 12.5px; font-weight: 500; color: #475467; width: 118px; }
+    .gtrack { position: absolute; left: 128px; right: 0; top: 0; bottom: 0;
+              background: linear-gradient(90deg,#F4F6FA 0 1px,transparent 1px) 0 0 / 12.5% 100%; }
+    .gbar { position: absolute; height: 22px; top: 4px; border-radius: 6px; color: #fff;
+            font-size: 11px; font-weight: 600; display: flex; align-items: center; padding: 0 9px; }
+
+    /* donut */
+    .donut-wrap { display: flex; flex-direction: column; align-items: center; }
+    .donut { width: 150px; height: 150px; border-radius: 50%;
+             background: conic-gradient(#4F46E5 0 32%,#6366F1 0 56%,#818CF8 0 74%,#A5B4FC 0 88%,#C7D2FE 0 96%,#E0E7FF 0 100%);
+             display: flex; align-items: center; justify-content: center; margin: 6px 0 14px; }
+    .donut .hole { width: 96px; height: 96px; border-radius: 50%; background: #fff;
+                   display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .donut .hole b { font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
+    .donut .hole span { font-size: 11px; color: #98A2B3; }
+    .leg { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+    .leg .r { display: flex; align-items: center; gap: 9px; font-size: 12.5px; }
+    .leg .sw { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto; }
+    .leg .r b { margin-left: auto; font-weight: 600; }
+
+    /* bars */
+    .bars { display: flex; align-items: flex-end; gap: 20px; height: 190px; padding-top: 8px; }
+    .bg { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .bpair { display: flex; align-items: flex-end; gap: 6px; height: 165px; }
+    .bar { width: 22px; border-radius: 5px 5px 0 0; }
+    .bar.plan { background: #DCE0EA; }
+    .bar.act { background: #4F46E5; }
+    .bg .nm { font-size: 12px; color: #475467; font-weight: 500; }
+
+    /* checklist */
+    .cl { display: flex; flex-direction: column; gap: 10px; }
+    .cli { display: flex; gap: 11px; padding: 12px 13px; border-radius: 11px; background: #FAFBFD;
+           border: 1px solid #EDF0F5; }
+    .cli .ci { margin-top: 1px; }
+    .cli.warn .ci { color: #B45309; } .cli.warn { background: #FFFBF3; border-color: #F5E6C8; }
+    .cli.info .ci { color: #4F46E5; }
+    .cli b { font-size: 13px; font-weight: 600; display: block; margin-bottom: 3px; }
+    .cli span { font-size: 12px; color: #667085; line-height: 1.5; }
+
+    /* insight */
+    .ins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .insc { background: #fff; border: 1px solid #E4E8F0; border-radius: 16px; padding: 18px 19px; }
+    .insc .tg { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600;
+                color: #4F46E5; background: #EEF0FF; padding: 5px 10px; border-radius: 8px; margin-bottom: 13px; }
+    .insc p { margin: 0; font-size: 13.5px; line-height: 1.65; color: #344054; }
+    .insc p b { color: #0B1524; font-weight: 600; }
+    .grade { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 7px;
+             font-size: 11.5px; font-weight: 600; }
+    .g-su { background: #ECFDF3; color: #059669; }
+    .g-mi { background: #FFF6E5; color: #B45309; }
+  </style>
+</helmet>
+
+<div class="cv">
+  <!-- ===== sidebar ===== -->
+  <aside class="side">
+    <div class="brand">
+      <b>AFTER<span class="a">.</span></b>
+      <b style="font-size:14px;letter-spacing:.16em;color:#8892A8;font-weight:600">CAMPAIGN</b>
+      <small style="margin-top:8px">비즈니스 3본부 · AX</small>
+    </div>
+    <div class="nav-h">캠페인</div>
+    <div class="nav on">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+      성과 대시보드
+    </div>
+    <div class="nav">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+      자료 업로드
+    </div>
+    <div class="nav">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><path d="m9 11 3 3L22 4"/></svg>
+      자료 검증
+    </div>
+    <div class="nav">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+      리포트 생성
+    </div>
+    <div class="nav">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      체크리스트
+      <span style="margin-left:auto;font-size:11px;background:#B45309;color:#fff;border-radius:20px;padding:1px 7px;font-weight:700" class="num">3</span>
+    </div>
+    <div class="side-foot">
+      <div class="acct">
+        <div class="ava">AX</div>
+        <div class="t"><b>정하늘 AE</b><span>제일기획</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== main ===== -->
+  <div class="main">
+    <div class="top">
+      <div class="camp"><span class="dot"></span>썸머 스파클 2026 런칭 캠페인
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+      <span class="top-chip num">2026.05.06 – 06.30 · 8주</span>
+      <span class="top-chip">광고주 델라이트 · 품목 제로 스파클링</span>
+      <div class="top-r">
+        <div class="icbtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>
+        <div class="icbtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+      </div>
+    </div>
+
+    <div class="body">
+      <div class="head">
+        <div>
+          <h1>캠페인 성과 요약</h1>
+          <p>제안 목표와 실집행 실적을 대조했어요. 매체·소재·기간을 한눈에 확인하세요.</p>
+        </div>
+        <div class="sp">
+          <button class="btn"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>내보내기</button>
+          <button class="btn pri"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>리포트 생성</button>
+        </div>
+      </div>
+
+      <!-- KPI -->
+      <div class="grid k5">
+        <div class="card kpi">
+          <div class="lab">총 노출</div>
+          <div class="val num">1.42<small>억 회</small></div>
+          <span class="delta up"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg>계획 대비 +5.2%</span>
+        </div>
+        <div class="card kpi">
+          <div class="lab">클릭수 · CTR</div>
+          <div class="val num">318<small>만 · 2.23%</small></div>
+          <span class="delta up"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg>+0.31%p</span>
+        </div>
+        <div class="card kpi">
+          <div class="lab">전환수</div>
+          <div class="val num">48,200<small>건</small></div>
+          <span class="delta up"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg>+12.4%</span>
+        </div>
+        <div class="card kpi">
+          <div class="lab">실집행 예산</div>
+          <div class="val num">4.82<small>억 원</small></div>
+          <span class="delta down"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 17h6v-6"/><path d="m22 17-8.5-8.5-5 5L2 7"/></svg>계획 대비 −3.6%</span>
+        </div>
+        <div class="card kpi">
+          <div class="lab">목표 달성률</div>
+          <div class="val num">105<small>%</small></div>
+          <span class="delta flat">노출 기준 · 초과 달성</span>
+        </div>
+      </div>
+
+      <!-- roadmap + donut -->
+      <div class="row2">
+        <div class="card">
+          <div class="ct-h">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+            <h3>기간별 · 소재별 집행 로드맵</h3>
+            <span class="badge">소재 5종</span>
+          </div>
+          <p class="ct-sub">매체 × 기간 × 소재를 시간축에 얹었어요. 온에어 구간을 막대로 표시해요.</p>
+          <div class="wk"><span>W1</span><span>W2</span><span>W3</span><span>W4</span><span>W5</span><span>W6</span><span>W7</span><span>W8</span></div>
+          <div class="gantt">
+            <div class="grow"><div class="glab">티저 영상</div><div class="gtrack"><div class="gbar" style="left:0;width:25%;background:#4F46E5">유튜브</div></div></div>
+            <div class="grow"><div class="glab">메인 필름</div><div class="gtrack"><div class="gbar" style="left:12.5%;width:50%;background:#6366F1">유튜브 · 메타</div></div></div>
+            <div class="grow"><div class="glab">제품 컷</div><div class="gtrack"><div class="gbar" style="left:25%;width:50%;background:#818CF8">네이버 · 카카오</div></div></div>
+            <div class="grow"><div class="glab">인플루언서</div><div class="gtrack"><div class="gbar" style="left:37.5%;width:25%;background:#6366F1">틱톡</div></div></div>
+            <div class="grow"><div class="glab">리타겟팅 배너</div><div class="gtrack"><div class="gbar" style="left:62.5%;width:37.5%;background:#4F46E5">전 매체</div></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ct-h"><h3>매체별 예산 비중</h3></div>
+          <div class="donut-wrap">
+            <div class="donut"><div class="hole"><b class="num">4.82억</b><span>실집행 합계</span></div></div>
+            <div class="leg">
+              <div class="r"><span class="sw" style="background:#4F46E5"></span>유튜브<b class="num">32%</b></div>
+              <div class="r"><span class="sw" style="background:#6366F1"></span>네이버 GFA<b class="num">24%</b></div>
+              <div class="r"><span class="sw" style="background:#818CF8"></span>메타<b class="num">18%</b></div>
+              <div class="r"><span class="sw" style="background:#A5B4FC"></span>카카오모먼트<b class="num">14%</b></div>
+              <div class="r"><span class="sw" style="background:#C7D2FE"></span>틱톡<b class="num">8%</b></div>
+              <div class="r"><span class="sw" style="background:#E0E7FF"></span>당근<b class="num">4%</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- bars + checklist -->
+      <div class="row3">
+        <div class="card">
+          <div class="ct-h">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+            <h3>계획 vs 실집행 · 매체별 예산</h3>
+            <span class="badge">단위 억 원</span>
+          </div>
+          <p class="ct-sub">회색은 제안 계획, 남색은 실집행이에요. 눈이 실적으로 먼저 가도록 두었어요.</p>
+          <div class="bars">
+            <div class="bg"><div class="bpair"><div class="bar plan" style="height:160px"></div><div class="bar act" style="height:155px"></div></div><div class="nm">유튜브</div></div>
+            <div class="bg"><div class="bpair"><div class="bar plan" style="height:120px"></div><div class="bar act" style="height:118px"></div></div><div class="nm">네이버</div></div>
+            <div class="bg"><div class="bpair"><div class="bar plan" style="height:90px"></div><div class="bar act" style="height:86px"></div></div><div class="nm">메타</div></div>
+            <div class="bg"><div class="bpair"><div class="bar plan" style="height:70px"></div><div class="bar act" style="height:68px"></div></div><div class="nm">카카오</div></div>
+            <div class="bg"><div class="bpair"><div class="bar plan" style="height:40px"></div><div class="bar act" style="height:39px"></div></div><div class="nm">틱톡</div></div>
+            <div class="bg"><div class="bpair"><div class="bar plan" style="height:20px"></div><div class="bar act" style="height:16px"></div></div><div class="nm">당근</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ct-h"><h3>확인이 필요해요</h3><span class="badge" style="color:#B45309;background:#FFF6E5">3건</span></div>
+          <p class="ct-sub">보고 전에 사람이 한 번 더 볼 항목이에요.</p>
+          <div class="cl">
+            <div class="cli warn">
+              <svg class="ic ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+              <div><b>문서 역할 미확정 1건</b><span>0521_기타_참고.xlsx — 역할을 지정해 주세요.</span></div>
+            </div>
+            <div class="cli warn">
+              <svg class="ic ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+              <div><b>집행 기간 3일 단축</b><span>제안 대비 종료가 06.30으로 당겨졌어요.</span></div>
+            </div>
+            <div class="cli info">
+              <svg class="ic ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+              <div><b>당근 전환값 확인 필요</b><span>노출은 채웠지만 전환 기여가 낮아요.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- lesson learned -->
+      <div class="card" style="padding:20px 22px">
+        <div class="ct-h" style="margin-bottom:16px">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+          <h3>Lesson-Learned · 다음 캠페인 제안</h3>
+        </div>
+        <div class="ins">
+          <div class="insc">
+            <span class="tg">효율 우수 <span class="grade g-su">초과 달성</span></span>
+            <p><b>유튜브 CTR이 목표의 118%</b>로 가장 효율이 높았어요. 다음 캠페인에서 예산 비중을 높여 볼 만해요.</p>
+          </div>
+          <div class="insc">
+            <span class="tg">개선 필요 <span class="grade g-mi">미달</span></span>
+            <p><b>당근은 노출은 채웠지만</b> 전환 기여가 낮았어요. 소재 교체나 타겟 재설정이 필요해요.</p>
+          </div>
+          <div class="insc">
+            <span class="tg">타이밍</span>
+            <p><b>리타겟팅 배너가 후반 2주에 전환의 41%</b>를 만들었어요. 다음엔 투입 시점을 앞당겨 볼 수 있어요.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

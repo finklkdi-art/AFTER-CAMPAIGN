@@ -1,0 +1,107 @@
+{
+  "version": "1.0",
+  "_comment": [
+    "문서 역할 판정 규칙. 코드 수정 없이 이 파일만 고쳐 조정할 수 있음.",
+    "판정 원칙: 파일명이 1차 신호, 본문 텍스트는 2차 보조 신호.",
+    "text_score_cap(0.20) < min_confidence(0.30) 이므로,",
+    "파일명 키워드가 하나도 없으면 항상 unknown 으로 남아 사람이 확정하게 됨."
+  ],
+
+  "min_confidence": 0.30,
+  "filename_keyword_weight": 0.45,
+  "filename_score_cap": 0.95,
+  "text_keyword_weight": 0.02,
+  "text_score_cap": 0.20,
+  "text_scan_chars": 3000,
+
+  "roles": {
+    "proposal": {
+      "label": "제안서",
+      "filename_keywords": ["제안", "기획안", "proposal", "imc"],
+      "text_keywords": ["제안", "전략", "기획", "목표", "strategy"]
+    },
+    "media_brief": {
+      "label": "미디어 브리프",
+      "filename_keywords": ["브리프", "brief"],
+      "text_keywords": ["브리프", "캠페인 개요", "타겟", "brief"]
+    },
+    "media_mix": {
+      "label": "미디어 믹스",
+      "filename_keywords": ["믹스", "mix", "미디어플랜", "media plan"],
+      "text_keywords": ["믹스", "예산", "매체별", "budget"]
+    },
+    "postbuy": {
+      "label": "포스트바이",
+      "filename_keywords": ["포스트바이", "postbuy", "post-buy", "post buy", "결과보고", "결과리포트", "성과보고"],
+      "text_keywords": ["포스트바이", "최종 성과", "집행 결과", "실적"]
+    },
+    "daily_report": {
+      "label": "데일리 리포트",
+      "filename_keywords": ["데일리", "daily", "일별", "일자별"],
+      "text_keywords": ["daily", "일자", "date", "일별"]
+    },
+    "sales_guide": {
+      "label": "세일즈 가이드",
+      "filename_keywords": ["세일즈", "sales", "세일즈가이드", "판매가이드", "제품가이드"],
+      "text_keywords": ["세일즈", "소구점", "제품 특장점", "sales"]
+    },
+    "creative": {
+      "label": "크리에이티브",
+      "filename_keywords": ["크리에이티브", "creative", "소재", "시안", "스토리보드", "카피"],
+      "text_keywords": ["소재", "시안", "카피", "creative"]
+    },
+    "placement_report": {
+      "label": "게재 보고",
+      "_comment": "매체별 실제 광고 게재 화면 캡처 모음. 결과보고서의 게재 이미지 원천.",
+      "filename_keywords": ["게재", "게재보고", "게재리포트", "온에어", "on-air", "onair",
+                            "노출보고", "게시보고", "소재보고", "스크린샷", "screenshot",
+                            "캡처", "캡쳐", "proof", "screen shot"],
+      "text_keywords": ["게재", "온에어", "노출 화면", "캡처", "캡쳐", "screenshot"]
+    }
+  },
+
+  "_generic_report_comment": [
+    "파일명이 그냥 '보고'/'보고서'로 끝나는 기획·제안 문서를 구제하는 규칙.",
+    "다른 역할이 하나도 잡히지 않았을 때(unknown)만 발동하므로 '결과보고'(포스트바이),",
+    "'게재보고'(게재 보고)처럼 이미 구체적 역할이 잡힌 파일은 건드리지 않는다.",
+    "본문이 읽히면 키워드로 최소 검증하고, 이미지 PDF 라 본문이 없으면 낮은 신뢰도로",
+    "부여한 뒤 Checklist 에 남겨 사람이 확정하게 한다."
+  ],
+  "generic_report_rule": {
+    "enabled": true,
+    "assign_role": "proposal",
+    "_stem_pattern_comment": "'보고'/'보고서' 뒤에 날짜·버전 접미사(_250324F, _v2, final)가 붙어도 잡는다. 한글이 이어지면(보고회의자료) 걸리지 않는다.",
+    "stem_pattern": "보고(서)?[\\s_\\-]*[0-9a-z._\\-]{0,12}$",
+    "min_text_chars": 200,
+    "require_text_keywords": ["전략", "기획", "목표", "제안", "타겟", "방향성",
+                              "컨셉", "메시지", "예산", "kpi", "매체 전략"],
+    "min_text_hits": 3,
+    "exclude_text_keywords": ["집행 결과", "달성률", "포스트바이", "청구",
+                              "게재 화면", "실집행", "정산"],
+    "max_exclude_hits": 2,
+    "confidence_verified": 0.55,
+    "confidence_unverified": 0.30
+  },
+
+  "_legacy_slot_comment": [
+    "구버전 호환용 proposal / postbuy 단일 슬롯에 넣을 대표 문서를 고르는 우선순위.",
+    "앞에 있는 역할일수록 대표로 선택됨. 선택되지 않은 문서도 documents 에 모두 보존됨."
+  ],
+  "legacy_slot_priority": {
+    "proposal": ["proposal", "media_brief", "media_mix", "sales_guide"],
+    "postbuy": ["postbuy", "daily_report"]
+  },
+
+  "_category_comment": "폴더명에서 품목을 추출할 때 쓰는 보조 사전. 괄호 안 표기가 우선이며, 여기에 없어도 괄호에서 추출됨.",
+  "category_aliases": {
+    "에어컨": ["에어컨", "무풍", "air conditioner"],
+    "냉장고": ["냉장고", "키친핏", "비스포크 냉장"],
+    "세탁건조기": ["세탁", "건조기", "워시타워", "에어드레서"],
+    "TV": ["tv", "oled", "qled", "네오qled"],
+    "청소기": ["청소기", "제트", "비스포크 제트"],
+    "김치냉장고": ["김치"],
+    "식기세척기": ["식기세척기", "식세기"],
+    "정수기": ["정수기"],
+    "인덕션": ["인덕션", "조리기기"]
+  }
+}

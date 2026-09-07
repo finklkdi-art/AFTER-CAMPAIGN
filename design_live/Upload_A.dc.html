@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #EEF1F6; }
+    .cv { width: 1440px; min-height: 1010px; display: flex;
+          font-family: "IBM Plex Sans KR", system-ui, sans-serif;
+          color: #0B1524; background: #EEF1F6; letter-spacing: -.01em; }
+    .num { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+    .ic { width: 18px; height: 18px; flex: 0 0 auto; }
+    .ic-sm { width: 16px; height: 16px; flex: 0 0 auto; }
+
+    .side { width: 240px; flex: 0 0 240px; background: #0B1524; color: #C3CAD9;
+            padding: 26px 16px; display: flex; flex-direction: column; gap: 4px; }
+    .brand { display: flex; flex-direction: column; gap: 1px; padding: 4px 10px 22px; }
+    .brand b { font-size: 18px; font-weight: 700; letter-spacing: .06em; color: #fff; line-height: 1.05; }
+    .brand b .a { color: #A5B4FC; }
+    .brand small { font-size: 11px; letter-spacing: .22em; color: #5B6577; font-weight: 500; }
+    .nav-h { font-size: 11px; font-weight: 600; letter-spacing: .12em; color: #56607a; padding: 16px 12px 6px; }
+    .nav { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 10px;
+           font-size: 14px; font-weight: 500; color: #9AA3B7; }
+    .nav.on { background: #4F46E5; color: #fff; font-weight: 600; }
+    .side-foot { margin-top: auto; padding-top: 16px; border-top: 1px solid #1B263C; }
+    .acct { display: flex; align-items: center; gap: 10px; padding: 8px 10px; }
+    .ava { width: 34px; height: 34px; border-radius: 9px; background: #26314B; color: #A5B4FC;
+           display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+    .acct .t b { display: block; font-size: 13px; color: #E7EAF2; font-weight: 600; }
+    .acct .t span { font-size: 11px; color: #5B6577; }
+
+    .main { flex: 1 1 auto; min-width: 0; }
+    .top { height: 62px; background: #fff; border-bottom: 1px solid #E4E8F0;
+           display: flex; align-items: center; gap: 12px; padding: 0 28px; font-size: 14px; }
+    .step { display: flex; align-items: center; gap: 9px; color: #98A2B3; font-weight: 500; }
+    .step .b { width: 24px; height: 24px; border-radius: 50%; background: #F0F2F7; color: #98A2B3;
+               display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+    .step.on { color: #0B1524; font-weight: 600; }
+    .step.on .b { background: #4F46E5; color: #fff; }
+    .step .bar { width: 40px; height: 1px; background: #E4E8F0; }
+
+    .body { max-width: 880px; margin: 0 auto; padding: 40px 28px; }
+    h1 { font-size: 27px; font-weight: 700; margin: 0 0 8px; letter-spacing: -.03em; }
+    .lead { font-size: 15px; color: #667085; margin: 0 0 28px; line-height: 1.6; }
+
+    .drop { border: 1.6px dashed #C7CEDE; background: #fff; border-radius: 18px;
+            padding: 46px 24px; text-align: center; }
+    .drop .cir { width: 58px; height: 58px; border-radius: 15px; background: #EEF0FF; color: #4F46E5;
+                 display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+    .drop .cir svg { width: 27px; height: 27px; }
+    .drop h3 { font-size: 17px; font-weight: 700; margin: 0 0 6px; }
+    .drop p { font-size: 13px; color: #98A2B3; margin: 0 0 18px; }
+    .fmt { display: inline-flex; gap: 7px; }
+    .fmt span { font-size: 11.5px; font-weight: 600; color: #475467; background: #F2F4F8;
+                border-radius: 7px; padding: 5px 10px; }
+
+    .sec-h { display: flex; align-items: center; gap: 8px; margin: 30px 0 13px; }
+    .sec-h b { font-size: 14.5px; font-weight: 700; }
+    .sec-h span { font-size: 12.5px; color: #98A2B3; margin-left: auto; }
+
+    .roles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; }
+    .role { display: flex; align-items: center; gap: 11px; padding: 13px 14px; background: #fff;
+            border: 1px solid #E4E8F0; border-radius: 13px; }
+    .role .ri { width: 34px; height: 34px; border-radius: 9px; background: #F2F4F8; color: #475467;
+                display: flex; align-items: center; justify-content: center; }
+    .role b { font-size: 13.5px; font-weight: 600; display: block; }
+    .role span { font-size: 11.5px; color: #98A2B3; }
+    .role.hit { border-color: #C7D2FE; background: #FAFBFF; }
+    .role.hit .ri { background: #EEF0FF; color: #4F46E5; }
+    .role .ok { margin-left: auto; color: #059669; }
+
+    .files { display: flex; flex-wrap: wrap; gap: 8px; }
+    .file { display: inline-flex; align-items: center; gap: 9px; padding: 9px 13px; background: #fff;
+            border: 1px solid #E4E8F0; border-radius: 20px; font-size: 13px; font-weight: 500; color: #344054; }
+    .file .sz { color: #98A2B3; font-size: 11.5px; }
+
+    .form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+    .fld { display: flex; flex-direction: column; gap: 7px; }
+    .fld.full { grid-column: 1 / -1; }
+    .fld label { font-size: 12.5px; font-weight: 600; color: #475467; }
+    .fld .in { height: 46px; border: 1px solid #D5DBE6; border-radius: 11px; background: #fff;
+               display: flex; align-items: center; padding: 0 14px; font-size: 14px; color: #101828; }
+    .fld .in.ph { color: #B6BECC; }
+
+    .foot { display: flex; align-items: center; gap: 12px; margin-top: 26px; }
+    .foot .note { font-size: 12.5px; color: #98A2B3; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; height: 52px; padding: 0 26px;
+           border-radius: 13px; font-size: 15px; font-weight: 700; border: 0;
+           background: #4F46E5; color: #fff; margin-left: auto; }
+  </style>
+</helmet>
+
+<div class="cv">
+  <aside class="side">
+    <div class="brand">
+      <b>AFTER<span class="a">.</span></b>
+      <b style="font-size:14px;letter-spacing:.16em;color:#8892A8;font-weight:600">CAMPAIGN</b>
+      <small style="margin-top:8px">비즈니스 3본부 · AX</small>
+    </div>
+    <div class="nav-h">캠페인</div>
+    <div class="nav"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>성과 대시보드</div>
+    <div class="nav on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>자료 업로드</div>
+    <div class="nav"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><path d="m9 11 3 3L22 4"/></svg>자료 검증</div>
+    <div class="nav"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>리포트 생성</div>
+    <div class="side-foot"><div class="acct"><div class="ava">AX</div><div class="t"><b>정하늘 AE</b><span>제일기획</span></div></div></div>
+  </aside>
+
+  <div class="main">
+    <div class="top">
+      <div class="step on"><span class="b">1</span>자료 업로드</div>
+      <span class="bar"></span>
+      <div class="step"><span class="b">2</span>자료 검증</div>
+      <span class="bar"></span>
+      <div class="step"><span class="b">3</span>리포트 생성</div>
+      <span class="bar"></span>
+      <div class="step"><span class="b">4</span>미리보기</div>
+    </div>
+
+    <div class="body">
+      <h1>캠페인 자료를 올려 주세요</h1>
+      <p class="lead">제안서 · 미디어믹스 · 데일리리포트 · 포스트바이 · 소재 파일을 한 번에 올려 주세요. 폴더 구조는 신경 쓰지 않으셔도 돼요.</p>
+
+      <div class="drop">
+        <div class="cir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg></div>
+        <h3>파일을 끌어다 놓거나 눌러서 선택해 주세요</h3>
+        <p>PDF보다 원본 파일(PPTX · XLSX)을 올리시면 인식이 더 정확해요.</p>
+        <div class="fmt"><span>PDF</span><span>XLSX</span><span>PPTX</span><span>DOCX</span></div>
+      </div>
+
+      <div class="sec-h"><b>올린 파일 5개</b><span class="num">합계 24.8MB</span></div>
+      <div class="files">
+        <div class="file"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>제안서_썸머스파클_v3.pptx<span class="sz num">8.2MB</span></div>
+        <div class="file"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>미디어믹스_최종.xlsx<span class="sz num">1.1MB</span></div>
+        <div class="file"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>데일리리포트_0506-0630.xlsx<span class="sz num">3.4MB</span></div>
+        <div class="file"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>포스트바이_결과보고.pdf<span class="sz num">11.0MB</span></div>
+        <div class="file"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>0521_기타_참고.xlsx<span class="sz num">1.1MB</span></div>
+      </div>
+
+      <div class="sec-h"><b>자동 인식한 자료 역할</b><span>파일명과 내용으로 추론했어요</span></div>
+      <div class="roles">
+        <div class="role hit"><div class="ri"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg></div><div><b>제안서</b><span>기획 의도 · 목표 KPI</span></div><svg class="ic-sm ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div class="role hit"><div class="ri"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></div><div><b>미디어믹스</b><span>매체별 예산 · 기간</span></div><svg class="ic-sm ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div class="role hit"><div class="ri"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></div><div><b>데일리리포트</b><span>일자별 성과</span></div><svg class="ic-sm ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div class="role hit"><div class="ri"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.2 15c.7-1.2 1-2.5.7-3.9-.6-2-2.4-3.5-4.4-3.5h-1.2c-.7-3-3.2-5.2-6.2-5.6"/><path d="M4 14a4 4 0 0 0 4 4h9"/></svg></div><div><b>포스트바이</b><span>최종 집행 실적</span></div><svg class="ic-sm ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div class="role hit"><div class="ri"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div><div><b>소재</b><span>시안 · 규격</span></div><svg class="ic-sm ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div class="role"><div class="ri"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div><div><b>역할 미확정 1건</b><span>0521_기타_참고.xlsx</span></div></div>
+      </div>
+
+      <div class="sec-h"><b>캠페인 개요</b><span>보고서 표지에 들어가요</span></div>
+      <div class="form">
+        <div class="fld full"><label>캠페인명</label><div class="in">썸머 스파클 2026 런칭 캠페인</div></div>
+        <div class="fld"><label>광고주</label><div class="in">델라이트</div></div>
+        <div class="fld"><label>품목</label><div class="in">제로 스파클링</div></div>
+      </div>
+
+      <div class="foot">
+        <span class="note">분석은 보통 20~40초 걸려요.</span>
+        <button class="btn">분석 시작하기<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

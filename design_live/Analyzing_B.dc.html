@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Black+Han+Sans&family=Gothic+A1:wght@400;500;700;900&display=swap');
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #EDE7DA; }
+    .cv { width: 1440px; min-height: 900px; background: #F3EEE4; color: #17140F;
+          font-family: "Gothic A1", system-ui, sans-serif; position: relative; }
+    .disp { font-family: "Bricolage Grotesque", sans-serif; }
+
+    /* dimmed page behind */
+    .behind { position: absolute; inset: 0; padding: 20px 48px; opacity: .35; filter: grayscale(.2); }
+    .nav { display: flex; align-items: center; gap: 20px; padding-bottom: 20px; border-bottom: 2px solid #17140F; }
+    .logo { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 20px; }
+    .ghost { height: 40px; border: 2px solid #17140F; border-radius: 12px; margin-top: 30px; }
+    .ghost.big { height: 220px; border-radius: 20px; }
+    .scrim { position: absolute; inset: 0; background: rgba(23,20,15,.4); }
+
+    /* modal */
+    .modal { position: absolute; top: 210px; left: 50%; transform: translateX(-50%); width: 620px;
+             background: #F3EEE4; border: 2px solid #17140F; border-radius: 22px; box-shadow: 10px 10px 0 #17140F;
+             padding: 34px 36px; }
+    .mh { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+    .spin { width: 34px; height: 34px; border: 3px solid #17140F; border-top-color: #FF5A38; border-radius: 50%; }
+    .modal h2 { font-family: "Black Han Sans"; font-size: 28px; margin: 0; }
+    .modal .sub { font-weight: 700; font-size: 14px; opacity: .55; margin: 0 0 22px; }
+
+    .bar { height: 22px; border: 2px solid #17140F; border-radius: 12px; overflow: hidden; background: #F8F4EC; }
+    .bar > div { height: 100%; width: 68%; background: #2B2BF5; }
+    .pct { display: flex; justify-content: space-between; margin-top: 8px; font-family: "Bricolage Grotesque";
+           font-weight: 700; font-size: 13px; }
+    .stage { font-family: "Black Han Sans"; font-size: 20px; margin: 20px 0 4px; }
+    .detail { font-weight: 600; font-size: 13px; opacity: .5; font-family: "Bricolage Grotesque"; }
+
+    .steps { display: flex; flex-direction: column; gap: 10px; margin-top: 22px; padding-top: 20px;
+             border-top: 2px solid #17140F; }
+    .st { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 14px; }
+    .st .k { width: 26px; height: 26px; border: 2px solid #17140F; border-radius: 50%; display: flex;
+             align-items: center; justify-content: center; flex: 0 0 auto; }
+    .st.done .k { background: #C6F24E; } .st.now .k { background: #2B2BF5; }
+    .st.todo { opacity: .4; }
+    .st svg { width: 15px; height: 15px; }
+    .foot { margin-top: 22px; font-weight: 700; font-size: 13px; opacity: .5; }
+  </style>
+</helmet>
+
+<div class="cv">
+  <div class="behind">
+    <div class="nav"><div class="logo">AFTER CAMPAIGN</div></div>
+    <div class="ghost" style="width:40%"></div>
+    <div class="ghost big"></div>
+    <div class="ghost" style="width:70%"></div>
+  </div>
+  <div class="scrim"></div>
+
+  <div class="modal">
+    <div class="mh"><div class="spin"></div><h2>캠페인 자료 분석 중</h2></div>
+    <p class="sub">올린 파일을 읽고 역할을 붙이고 있어요.</p>
+
+    <div class="bar"><div></div></div>
+    <div class="pct"><span>진행 중</span><span>68%</span></div>
+
+    <div class="stage">데일리리포트 읽는 중</div>
+    <div class="detail">daily_report · 0506-0630.xlsx — 8 sheets</div>
+
+    <div class="steps">
+      <div class="st done"><span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>업로드 파일 저장</div>
+      <div class="st done"><span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>문서 역할 인식</div>
+      <div class="st now"><span class="k"></span>일자별 성과 파싱</div>
+      <div class="st todo"><span class="k"></span>캠페인 지식 구조화</div>
+    </div>
+
+    <div class="foot">보통 20~40초 걸려요. 끝나면 검증 화면으로 넘어가요.</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

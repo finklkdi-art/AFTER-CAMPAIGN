@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Black+Han+Sans&family=Gothic+A1:wght@400;500;700;900&display=swap');
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #EDE7DA; }
+    .cv { width: 1440px; min-height: 900px; background: #F3EEE4; color: #17140F;
+          font-family: "Gothic A1", system-ui, sans-serif; display: flex; flex-direction: column; }
+    .disp { font-family: "Bricolage Grotesque", sans-serif; }
+    .ic { width: 17px; height: 17px; flex: 0 0 auto; }
+
+    .nav { display: flex; align-items: center; gap: 20px; padding: 20px 48px; border-bottom: 2px solid #17140F; }
+    .logo { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 20px; letter-spacing: -.02em; }
+    .logo sup { font-size: 10px; }
+    .navlinks { display: flex; gap: 26px; margin-left: 26px; font-size: 14px; font-weight: 700; }
+    .navlinks a { color: #17140F; text-decoration: none; opacity: .55; }
+    .nav-r { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .pill { border: 2px solid #17140F; border-radius: 40px; padding: 9px 16px; font-size: 13px; font-weight: 700; }
+
+    .hero { flex: 1; display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px;
+            align-items: center; padding: 60px 48px; }
+    .badge { display: inline-block; border: 2px solid #17140F; border-radius: 40px; padding: 8px 16px;
+             font-family: "Bricolage Grotesque"; font-weight: 700; font-size: 13px; letter-spacing: .12em;
+             text-transform: uppercase; margin-bottom: 26px; }
+    h1 { font-family: "Black Han Sans"; font-weight: 400; font-size: 82px; line-height: .98;
+         letter-spacing: -.02em; margin: 0 0 26px; }
+    h1 em { font-style: normal; color: #2B2BF5; }
+    .lead { font-weight: 700; font-size: 20px; line-height: 1.55; margin: 0 0 40px; max-width: 620px; }
+    .kbr { display: inline-block; }
+    .cta { display: inline-flex; align-items: center; gap: 12px; height: 66px; padding: 0 34px;
+           border: 2px solid #17140F; border-radius: 18px; background: #FF5A38; color: #fff;
+           font-family: "Black Han Sans"; font-size: 24px; box-shadow: 6px 6px 0 #17140F; }
+    .notice { margin-top: 22px; font-weight: 700; font-size: 14px; opacity: .5; }
+
+    .stack { position: relative; height: 520px; }
+    .cardbig { position: absolute; border: 2px solid #17140F; border-radius: 22px; box-shadow: 8px 8px 0 #17140F;
+               display: flex; flex-direction: column; justify-content: center; padding: 30px; }
+    .c1 { top: 20px; left: 40px; width: 300px; height: 200px; background: #2B2BF5; color: #fff; transform: rotate(-4deg); }
+    .c2 { top: 150px; left: 130px; width: 300px; height: 220px; background: #C6F24E; transform: rotate(5deg); }
+    .c3 { top: 300px; left: 20px; width: 280px; height: 170px; background: #F3EEE4; transform: rotate(-2deg); }
+    .cardbig .t { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 15px; opacity: .8; }
+    .cardbig .n { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 46px; line-height: 1; margin-top: 8px; }
+    .cardbig .s { font-family: "Black Han Sans"; font-size: 20px; margin-top: 6px; }
+  </style>
+</helmet>
+
+<div class="cv">
+  <div class="nav">
+    <div class="logo">AFTER CAMPAIGN<sup>®</sup></div>
+    <div class="navlinks"><a href="#">성적표</a><a href="#">업로드</a><a href="#">리포트</a><a href="#">체크리스트</a></div>
+    <div class="nav-r"><span class="pill">비즈니스 3본부 · AX</span></div>
+  </div>
+
+  <div class="hero">
+    <div>
+      <div class="badge">After Campaign</div>
+      <h1>흩어진 자료를 올리면,<br><em>결과 리포트</em>가<br>나와요.</h1>
+      <p class="lead"><span class="kbr">제안서부터 온에어 소재까지 수개월치 기록을 한곳에 모아,</span> <span class="kbr">제안 목표와 실집행 실적을 대조하고</span> <span class="kbr">다음 캠페인 전략까지 정리해 드려요.</span></p>
+      <button class="cta">시작하기<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+      <div class="notice">100% 로컬에서 돌아가요. 자료는 이 PC 밖으로 나가지 않아요.</div>
+    </div>
+    <div class="stack">
+      <div class="cardbig c1"><div class="t">목표 달성률</div><div class="n">105%</div><div class="s" style="opacity:.85">초과 달성</div></div>
+      <div class="cardbig c2"><div class="t">총 노출</div><div class="n">1.42억</div><div class="s">잘 퍼졌어요</div></div>
+      <div class="cardbig c3"><div class="t">실집행 예산</div><div class="n">4.82억</div><div class="s" style="color:#17140F">계획의 96%</div></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# 외부 호스팅(Streamlit Community Cloud 등) 배포 설정 (2026.09 개정)
+# 로컬 전용·localhost 바인딩 조항은 해제됨. 플랫폼이 바인딩·TLS·포트를 관리한다.
+# 색값의 단일 소스는 Scripts/dashboard/theme_css.py 이며 여기서는 미러링만 한다.
+
+[server]
+headless = true
+fileWatcherType = "none"       # 호스팅에서는 파일 변경 감시 불필요
+enableXsrfProtection = true    # CSRF 방어 (CORS 는 이에 맞춰 자동 제한됨)
+maxUploadSize = 50             # 업로드 상한(MB) — 무료 서버 RAM 보호
+
+[browser]
+gatherUsageStats = false       # 사용 통계 외부 전송 차단
+
+[theme]
+base = "light"
+primaryColor = "#385BD5"
+backgroundColor = "#F6F8FA"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#151E2C"
+
+[client]
+toolbarMode = "minimal"
+showErrorDetails = false        # 호스팅에서는 트레이스백에 경로·데이터가 새지 않게 숨김
