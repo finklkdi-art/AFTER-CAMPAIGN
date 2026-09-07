@@ -21,7 +21,6 @@ STEP 1 — 파일 업로드 (Stage 0 + Stage 1)
   → 원본(PPTX/EXCEL)이 PDF보다 느리지 않으며 표 구조가 보존되어 인식률이 높다.
 """
 
-import contextlib
 import io
 import json
 from pathlib import Path
@@ -34,6 +33,7 @@ from utils.checklist_manager import ChecklistManager
 from utils.dataset_builder import CampaignDatasetBuilder
 from utils import dataset_snapshot
 from ingest import UploadWorkspace, Progress
+from utils.capture import capture_output
 from dashboard import state, theme_css as T
 
 UPLOAD_HINT = (
@@ -127,8 +127,14 @@ def _analyze_dialog(folder: Path, project_root: Path, *, label: str,
         folder = ws.root
 
     # ── Stage 1: 파싱 + 데이터셋 구성
+    #
+    # 🔴 `contextlib.redirect_stdout` 을 쓰지 않는다. 그건 전역 sys.stdout 을
+    #    바꾸는데, Streamlit Cloud 는 한 프로세스로 모든 접속자를 받고 세션마다
+    #    스레드를 쓴다. 두 AE 가 동시에 분석하면 서로의 파싱 로그가 섞이고,
+    #    그 로그는 실패 시 화면에 보여 주는 값이라 남의 파일명이 내 화면에
+    #    뜨게 된다 (claude.md 1.2 세션 격리 위반). utils/capture 참고.
     try:
-        with contextlib.redirect_stdout(log), contextlib.redirect_stderr(log):
+        with capture_output(log):
             knowledge = run_step1(str(folder), on_progress=show)
             show(0.97, '캠페인 지식 구조화')
             dataset = CampaignDatasetBuilder.build(knowledge)
@@ -226,8 +232,10 @@ def _fail_hint(failed) -> str:
     reasons = [(getattr(d, 'error_msg', '') or '') for d in failed]
     if any('문서보안' in r or 'DRM' in r.upper() or 'NASCA' in r.upper()
            for r in reasons):
-        return ('사내 문서보안(DRM)이 걸린 파일이에요. '
-                '파일 우클릭 → 문서보안 해제 후 다시 올려 주세요.')
+        # 보안 에이전트가 잠겨 있을 때도 같은 증상이 난다(utils/drm_check 참고).
+        # 실제로는 로그인만 하면 되는 경우가 많아서 그쪽을 먼저 안내한다.
+        return ('사내 문서보안이 걸린 파일이에요. 문서보안 프로그램에 '
+                '로그인되어 있는지 확인하고 다시 올려 주세요.')
     return '파일이 손상됐거나 지원하지 않는 형식일 수 있어요.'
 
 

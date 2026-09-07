@@ -277,7 +277,7 @@ def numeric_drift(before: List[str], after: List[str]) -> List[str]:
     문안 교정이 근거 수치를 흔들면 보고서의 신뢰가 무너진다.
     전체 문안의 수치 다중집합(multiset)이 같은지 대조해 강등 판단에 쓴다.
 
-    Returns: 사라진/새로 생긴 수치 목록 (빈 리스트면 이상 없음)
+    Returns: 사라진/새로 생긴/자리를 옮긴 수치 목록 (빈 리스트면 이상 없음)
     """
     def bag(lines: List[str]) -> Dict[str, int]:
         out: Dict[str, int] = {}
@@ -292,7 +292,21 @@ def numeric_drift(before: List[str], after: List[str]) -> List[str]:
     for k in sorted(set(b) | set(a)):
         if b.get(k, 0) != a.get(k, 0):
             diff.append(f'{k} ({b.get(k, 0)}→{a.get(k, 0)}회)')
-    return diff
+    if diff:
+        return diff
+
+    # 🔴 전체 개수가 같아도 안심할 수 없다.
+    #
+    # 줄마다 하나의 주장과 그 근거 수치가 짝을 이룬다(Rule Book 3.2). 모델이
+    # 1번 줄의 '123%' 와 2번 줄의 '34.7%' 를 맞바꾸면 **다중집합은 그대로**라
+    # 위 검사를 통과하지만, 근거가 엉뚱한 주장에 붙은 보고서가 나간다.
+    # 그래서 줄 단위로 한 번 더 대조한다.
+    if len(before) == len(after):
+        moved = [str(i) for i, (bl, al) in enumerate(zip(before, after), 1)
+                 if bag([bl]) != bag([al])]
+        if moved:
+            return [f'{" · ".join(moved)}번째 줄에서 수치가 자리를 옮김']
+    return []
 
 
 def revise(request: ReviseRequest, *,

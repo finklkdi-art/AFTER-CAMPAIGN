@@ -139,6 +139,17 @@ class KnowledgeBuilder:
         classifier.last_reason = ''
         role, confidence, scores = classifier.classify(file_name, text_content)
 
+        # 열 제목으로 구제한 경우도 근거를 남긴다 — 파일명이 아니라 표 구조를
+        # 보고 붙인 역할이라 사람이 한 번 확인해야 한다 (claude.md 3.3 · 3.4).
+        if scores.get('_header_match') and classifier.last_reason:
+            knowledge.add_checklist_item(ChecklistItem(
+                type='role_inferred_by_header',
+                severity='info',
+                message=f"'{file_name}' 역할을 {classifier.label_of(role)}(으)로 추정 — 확인 필요",
+                detail=classifier.last_reason,
+                source=f'role_classifier:{file_name}',
+            ))
+
         # '…보고' 구제 규칙이 발동했으면 근거를 남긴다 — 파일명만 보고 붙인
         # 역할이므로 사람이 확인해야 한다 (claude.md 3.3)
         if scores.get('_generic_report') and classifier.last_reason:

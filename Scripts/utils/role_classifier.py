@@ -89,6 +89,11 @@ class RoleClassifier:
             (역할 키, 신뢰도, 역할별 점수)
             신뢰도가 임계값 미만이면 역할은 'unknown'
         """
+        # 구제 사유는 매 호출마다 비운다. 남겨 두면 다음 문서가 파일명으로
+        # 정상 판정됐는데도 **직전 문서의 사유**가 붙어, Checklist 에 엉뚱한
+        # 근거가 실린다 (호출부가 지워 주길 기대하지 않는다).
+        self.last_reason = ''
+
         name_lower = (file_name or '').lower()
         text_lower = (text_content or '').lower()[:self._tx_scan]
 
@@ -124,7 +129,24 @@ class RoleClassifier:
         # 텍스트 점수 상한(_tx_cap)이 임계값보다 낮으므로,
         # 파일명 신호가 전혀 없으면 여기서 항상 unknown 으로 남는다.
         if best_score < self.min_confidence:
-            # 구제 규칙 — '…보고' 로 끝나는 기획/제안 문서
+            # 구제 규칙 ① — 표의 '열 제목'으로 판정
+            #
+            # 파일명 신호가 없을 때 문서를 통째로 버리던 자리다. AE 가 파일을
+            # '예산표.xlsx' 처럼 바꿔 올리면 내용이 완전한 미디어믹스여도
+            # unknown 이 되어 계획 라인 19건이 통째로 사라졌다(실측).
+            # 느슨한 본문 키워드('예산' 하나만 스쳐도 가점) 대신 **열 제목
+            # 여러 개가 함께 나타나는지**를 본다 — 표 구조는 문서 종류를
+            # 훨씬 정확히 가른다. 파일명으로 이미 판정된 문서는 여기에
+            # 오지 않으므로 기존 판정을 흔들 위험이 없다.
+            headed = self._header_signal(text_lower)
+            if headed:
+                role, score, reason = headed
+                scores[role] = max(scores.get(role, 0.0), score)
+                scores['_header_match'] = score
+                self.last_reason = reason
+                return role, score, scores
+
+            # 구제 규칙 ② — '…보고' 로 끝나는 기획/제안 문서
             rescued = self._generic_report(file_name, text_content)
             if rescued:
                 role, score, reason = rescued
@@ -136,10 +158,48 @@ class RoleClassifier:
 
         return best_role, best_score, scores
 
-    # ---------- '…보고' 구제 규칙 ----------
+    # ---------- 열 제목 기반 구제 규칙 ----------
 
     #: 직전 classify() 에서 구제 규칙이 발동했을 때의 사유 (Checklist 기재용)
     last_reason: str = ''
+
+    def _header_signal(self, text_lower: str) -> Optional[Tuple[str, float, str]]:
+        """
+        표의 열 제목 조합으로 역할을 판정한다.
+
+        **여러 개가 동시에** 나와야 인정한다(`header_min_hits`). '예산' 한
+        낱말은 어느 문서에나 있지만, [매체 · 상품 · 기간 · 예산] 이 함께
+        나오는 문서는 미디어믹스일 가능성이 매우 높다. 정밀도를 위해 한 건도
+        놓치지 않는 쪽보다 **틀리지 않는 쪽**을 택한 설계다.
+
+        Returns:
+            (역할, 신뢰도, 사유) 또는 None
+        """
+        if not text_lower.strip():
+            return None
+        min_hits = int(self.config.get('header_min_hits', 3))
+        weight = float(self.config.get('header_keyword_weight', 0.16))
+        cap = float(self.config.get('header_score_cap', 0.72))
+
+        best: Optional[Tuple[str, float, List[str]]] = None
+        for role_key, spec in self.roles.items():
+            keywords = spec.get('header_keywords') or []
+            hits = [kw for kw in keywords
+                    if kw and kw.lower() in text_lower]
+            if len(hits) < min_hits:
+                continue
+            score = min(len(hits) * weight, cap)
+            if best is None or score > best[1]:
+                best = (role_key, score, hits)
+
+        if best is None or best[1] < self.min_confidence:
+            return None
+
+        role, score, hits = best
+        return (role, round(score, 3),
+                f"파일명에 단서가 없어 표의 열 제목으로 판정 — "
+                f"{self.label_of(role)} 열 {len(hits)}개 일치"
+                f"({' · '.join(hits[:5])})")
 
     def _generic_report(self, file_name: str,
                         text_content: str) -> Optional[Tuple[str, float, str]]:

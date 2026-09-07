@@ -10,6 +10,7 @@ from pptx import Presentation
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 from .encoder import detect_encoding, safe_decode
+from .errors import humanize_parse_error
 import openpyxl
 
 
@@ -60,7 +61,7 @@ class FileParser:
         if drm:
             result['status'] = 'error'
             result['error_msg'] = drm
-            return result
+            return FileParser._finalize(result)
 
         try:
             file_type = result['file_type']
@@ -81,7 +82,74 @@ class FileParser:
             result['status'] = 'error'
             result['error_msg'] = str(e)
 
+        return FileParser._finalize(result)
+
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _finalize(result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        핸들러 결과를 최종 판정한다.
+
+        🔴 여기가 없던 탓에 생긴 버그 — 확장자별 핸들러(_parse_xlsx 등)는
+        예외를 잡아 `error_msg` 만 채우고 **`status` 는 건드리지 않았다.**
+        `parse_file` 은 그 dict 를 update 만 하므로 status 는 초기값
+        'success' 그대로 남았다. 결과적으로 0바이트 파일·잘린 파일·확장자만
+        바꾼 파일이 전부 "정상 파싱됨(내용 없음)"으로 보고됐고, 상위 단계는
+        문서를 성공으로 등록했다. 시뮬레이션 15건 중 11건이 이 경우였다.
+
+        판정 규칙 — 내용을 건졌는지로 가른다 (claude.md 3.1 · 조용한 소실 금지).
+          · 오류 + 내용 없음  → error   (진짜 실패)
+          · 오류 + 내용 있음  → success + partial=True
+            (PDF 5쪽 중 4쪽을 읽고 마지막에서 실패한 경우가 여기다.
+             읽은 4쪽을 버리지 않고 살리되, 일부만 읽었다는 사실은 남긴다)
+          · 오류 없음         → success
+        """
+        raw = (result.get('error_msg') or '').strip()
+        has_content = bool(result.get('tables')) or bool(
+            (result.get('text_content') or '').strip())
+
+        if raw:
+            message, detail = humanize_parse_error(
+                raw, file_name=result.get('file_name', ''))
+            result['error_msg'] = message      # 사용자에게 보이는 한 문장
+            result['error_detail'] = detail    # 개발자용 기술 원문
+            if has_content:
+                result['status'] = 'success'
+                result['partial'] = True
+            else:
+                result['status'] = 'error'
+        else:
+            result.setdefault('error_detail', '')
+            result.setdefault('partial', False)
+
         return result
+
+    # 시트 텍스트 상한.
+    #
+    # `df.astype(str).to_string()` 은 시트 전체를 문자열로 한 번 더 복제한다.
+    # 이 텍스트를 쓰는 곳은 역할 추론(앞 3,000자)과 개요 추출(앞부분)뿐인데,
+    # 상한이 없으면 큰 시트에서 수 MB 짜리 문자열이 만들어져 세션이 끝날 때까지
+    # SourceDocument 에 남는다. 무료 호스팅(1GB)에서 동시 접속자가 몇 명만
+    # 되어도 위험하다.
+    #
+    # 실측 기준으로 여유를 크게 잡았다 — 샘플 6개 캠페인의 최대 시트가
+    # 262행 · 118,086자였으므로 아래 값은 3배 이상의 헤드룸이다.
+    # 즉 실제 파일의 동작은 그대로 두고 최악의 경우만 막는다.
+    _TEXT_ROW_BUDGET = 5000
+    _TEXT_CHAR_BUDGET = 400_000
+
+    @staticmethod
+    def _sheet_text(df) -> str:
+        """시트를 분류·개요용 텍스트로 — 행/글자 상한을 걸어 잘라 담는다."""
+        head = df.head(FileParser._TEXT_ROW_BUDGET)
+        try:
+            text = head.astype(str).to_string()
+        except Exception:
+            # 이상한 dtype 이 섞여 변환이 실패해도 파싱 전체를 실패시키지 않는다.
+            # 표 데이터(tables)는 이미 확보돼 있으므로 텍스트만 포기한다.
+            return ''
+        return text[:FileParser._TEXT_CHAR_BUDGET]
 
     @staticmethod
     def _parse_xlsx(file_path: str) -> Dict[str, Any]:
@@ -106,9 +174,9 @@ class FileParser:
                         'shape': df.shape
                     })
 
-                    # 첫 번째 시트의 텍스트도 추출
+                    # 첫 번째 시트의 텍스트도 추출 (역할 추론·개요 추출용)
                     if not result['text_content']:
-                        result['text_content'] = df.astype(str).to_string()
+                        result['text_content'] = FileParser._sheet_text(df)
             finally:
                 excel_file.close()   # 업로드본 삭제를 막지 않도록 핸들을 닫는다
 

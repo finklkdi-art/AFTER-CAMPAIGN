@@ -27,3 +27,6 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
+
+# 시뮬레이션 임시 산출물
+Scripts/sim/__pycache__/

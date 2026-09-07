@@ -1,0 +1,68 @@
+{
+  "(VD) 2025 OLED TV 캠페인": {
+    "docs": 6,
+    "failed": 0,
+    "drm_locked": 0,
+    "mode": "lite",
+    "seconds": 16.6,
+    "plan_lines": 134,
+    "daily_rows": 46,
+    "media_performance": 75,
+    "kpi_targets": 0
+  },
+  "(VD) 2025 무빙스타일 캠페인": {
+    "docs": 5,
+    "failed": 0,
+    "drm_locked": 0,
+    "mode": "lite",
+    "seconds": 23.2,
+    "plan_lines": 37,
+    "daily_rows": 65,
+    "media_performance": 136,
+    "kpi_targets": 0
+  },
+  "(냉장고) 2025 AI 하이브리드 키친핏 Max 캠페인": {
+    "docs": 4,
+    "failed": 0,
+    "drm_locked": 0,
+    "mode": "lite",
+    "seconds": 12.7,
+    "plan_lines": 15,
+    "daily_rows": 50,
+    "media_performance": 16,
+    "kpi_targets": 0
+  },
+  "(세탁건조기) 2025 워시타워 공략 캠페인": {
+    "docs": 5,
+    "failed": 0,
+    "drm_locked": 0,
+    "mode": "lite",
+    "seconds": 9.0,
+    "plan_lines": 30,
+    "daily_rows": 84,
+    "media_performance": 66,
+    "kpi_targets": 0
+  },
+  "(시스템에어컨) 2025 인피니트라인 필름 캠페인": {
+    "docs": 7,
+    "failed": 0,
+    "drm_locked": 0,
+    "mode": "full",
+    "seconds": 5.6,
+    "plan_lines": 35,
+    "daily_rows": 59,
+    "media_performance": 38,
+    "kpi_targets": 26
+  },
+  "(에어컨) 2025 AI 무풍콤보 런칭 캠페인": {
+    "docs": 5,
+    "failed": 0,
+    "drm_locked": 0,
+    "mode": "full",
+    "seconds": 8.0,
+    "plan_lines": 19,
+    "daily_rows": 98,
+    "media_performance": 37,
+    "kpi_targets": 13
+  }
+}
