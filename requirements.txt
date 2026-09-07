@@ -1,19 +1,26 @@
 # 광고 캠페인 결과 리포트 자동화 솔루션 - 의존성
-# 100% 로컬 환경 구동 전제 (외부 DB/업로드 없음)
+# 외부 호스팅(Streamlit Community Cloud 등) 배포 전제 (2026.09 개정)
 
-# --- 로컬 웹 UI ---
+# --- 웹 UI ---
 streamlit>=1.28.0
+altair>=5.0.0           # dashboard/charts.py 시각화 (streamlit 내장 의존성이지만 명시)
 
 # --- 데이터 처리 ---
 pandas>=1.5.0
 
 # --- 파일 파서 (utils/file_parser.py) ---
-openpyxl>=3.1.0        # .xlsx
-pdfplumber>=0.10.0     # .pdf
-python-pptx>=0.6.21    # .pptx
-python-docx>=1.1.0     # .docx
+openpyxl>=3.1.0         # .xlsx
+pdfplumber>=0.10.0      # .pdf
+python-pptx>=0.6.21     # .pptx
+python-docx>=1.1.0      # .docx
+lxml>=4.9.0             # pptx/docx 내부 XML 처리 (명시 — 누락 시 파싱 실패)
+chardet>=5.0.0           # utils/encoder.py 인코딩 자동 감지 (필수 — 앱 기동에 직결)
 
-# --- Stage 4.5: Claude API 어댑터 (Rule Book 1.4 예외 조항) ---
+# --- 게재 보고(placement_report) 이미지 추출 ---
+pypdfium2>=4.0.0        # PDF 페이지 렌더링
+Pillow>=10.0.0          # pypdfium2 의 to_pil() 변환에 필요
+
+# --- Claude API 어댑터 (claude.md 1.5 — 문안 수정·요약) ---
 # 키 미설정 시에도 파이프라인은 프리셋으로 강등 동작합니다.
 anthropic>=0.40.0
 
