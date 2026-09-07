@@ -39,20 +39,78 @@ class ReportRenderer:
 
     # ------------------------------------------------------------------
 
+    #: 렌더 중 건너뛴 슬라이드 종류 (호출부가 Checklist 에 남길 수 있게 공개)
+    skipped_kinds: List[str]
+    #: 그리다 실패한 슬라이드 [(kind, 사유)] — 빈 장으로 남고 사실이 기록된다
+    failed_slides: List[tuple]
+
     def render(self, spec: ReportSpec, out_path: str) -> str:
         self._tag = spec.campaign_tag
+        self.skipped_kinds = []
+        self.failed_slides = []
         for s in spec.slides:
             handler = getattr(self, f'_slide_{s.kind}', None)
             if handler is None:
+                # 🔴 조용히 버리지 않는다.
+                #
+                # 예전에는 그냥 continue 했다. 지금은 모든 kind 에 핸들러가
+                # 있지만, 새 블록을 추가하면서 핸들러를 빠뜨리면 그 슬라이드가
+                # **아무 흔적 없이** 덱에서 사라진다. 장수만 줄어들 뿐이라
+                # 아무도 눈치채지 못한다 (claude.md 3.1 조용한 소실 금지).
+                self.skipped_kinds.append(s.kind)
+                spec.warnings.append(
+                    f"'{s.kind}' 슬라이드를 그릴 수 없어 건너뛰었어요 "
+                    f'(렌더러에 해당 처리기가 없음)')
                 continue
+
+            # 🔴 한 장의 실패가 보고서 전체를 날리지 않게 한다.
+            #
+            # 핸들러들은 payload 를 `p['section']` 처럼 직접 인덱싱한다(65곳).
+            # 블록 생성기가 키 하나를 빠뜨리면 KeyError 가 render() 밖으로
+            # 터져 나가 **PPTX 가 아예 만들어지지 않는다.** AE 입장에선 몇 분
+            # 걸린 작업이 마지막에 통째로 사라지는 셈이다. 시뮬레이션에서
+            # 빈 payload 하나로 전체 렌더가 죽는 것을 확인했다.
+            #
+            # 이제 실패한 장은 비워 두고 사실을 기록한 뒤 계속 진행한다
+            # (claude.md 3.3 파싱 에러 시 강제 종료 금지 · 3.1 조용한 소실 금지).
             slide = self.prs.slides.add_slide(self._blank)
-            handler(slide, s.payload)
+            try:
+                handler(slide, s.payload)
+            except Exception as e:
+                self.failed_slides.append((s.kind, f'{type(e).__name__}: {e}'))
+                spec.warnings.append(
+                    f"'{s.kind}' 슬라이드를 그리는 중 문제가 생겨 비워 뒀어요 "
+                    f'— {type(e).__name__}')
+                self._render_failure_notice(slide, s.kind)
 
         self._scrub_package()
         out = Path(out_path)
         out.parent.mkdir(parents=True, exist_ok=True)
         self.prs.save(str(out))
         return str(out)
+
+    def _render_failure_notice(self, slide, kind: str) -> None:
+        """
+        그리지 못한 장을 빈 채로 두지 않고 왜 비었는지 한 줄 남긴다.
+
+        아무 표시 없는 백지가 섞이면 AE 는 '원래 이런 장인가' 하고 넘어간다.
+        보고서에 실린 채로 광고주에게 가는 것보다, 여기서 눈에 띄는 편이 낫다.
+        """
+        try:
+            box = slide.shapes.add_textbox(
+                Inches(1.0), Inches(3.0), Inches(11.3), Inches(1.2))
+            tf = box.text_frame
+            tf.word_wrap = True
+            para = tf.paragraphs[0]
+            run = para.add_run()
+            run.text = (f'이 장({kind})은 자동으로 그리지 못했어요. '
+                        f'2단계에서 해당 항목을 확인해 주세요.')
+            run.font.size = Pt(14)
+            run.font.name = T.BODY_REG
+        except Exception:
+            # 안내 문구조차 실패하면 그냥 빈 장으로 둔다 — 여기서 또 터지면
+            # 애초에 막으려던 '전체 렌더 실패'가 되돌아온다.
+            pass
 
     # ------------------------------------------------------------------
     # 패키지 스크럽 — 절대 규칙을 파일 전체에 강제

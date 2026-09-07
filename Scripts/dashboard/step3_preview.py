@@ -451,7 +451,16 @@ def render_drawer(block_id: Optional[str] = None) -> None:
 # ═══════════════════════════ 생성
 
 def _versioned_path(out_dir: Path, date: str, category: str) -> Path:
-    """기존 파일 덮어쓰기 금지 — 같은 이름이 있으면 버전을 올린다"""
+    """
+    기존 파일 덮어쓰기 금지 — 같은 이름이 있으면 버전을 올린다.
+
+    품목은 AE 가 직접 타이핑하는 값이라 'AV/VD' 처럼 경로 구분자가 들어올 수
+    있다. 그대로 두면 없는 하위 폴더로 해석돼 **리포트를 다 만든 뒤 저장에서만**
+    터진다. 이름 조각을 먼저 저장 가능한 형태로 다듬는다 (claude.md 1.4).
+    """
+    from utils.errors import safe_filename_part
+    date = safe_filename_part(date, fallback='YYMMDD', max_len=12)
+    category = safe_filename_part(category, fallback='미지정')
     v = 0
     while True:
         p = out_dir / f'{date}_{category}_결과리포트_v{v}_Cheil.pptx'

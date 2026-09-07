@@ -248,8 +248,17 @@ def add_styled_table(slide, header: Sequence[str], rows: Sequence[Sequence],
     table.horz_banding = False
 
     if col_w:
-        total = sum(col_w)
-        for i, cw in enumerate(col_w):
+        # 🔴 col_w 길이를 표의 실제 열 수에 맞춘다.
+        #
+        # 호출부는 기본 col_w 로 9칸짜리 비율을 넘긴다(renderer). 헤더가 그보다
+        # 좁은 표(예: 4열)에 그대로 적용하면 `table.columns[4]` 에서
+        # IndexError 가 나며 **그 슬라이드가 통째로 날아간다.**
+        # 열 수가 다른 표를 넣는 건 정상 입력이므로 여기서 맞춰 준다.
+        widths = list(col_w)[:n_cols]
+        if len(widths) < n_cols:                # 모자라면 남는 칸은 균등 분배
+            widths += [1.0] * (n_cols - len(widths))
+        total = sum(widths) or float(n_cols)
+        for i, cw in enumerate(widths):
             table.columns[i].width = Emu(int(w * EMU_PER_IN * cw / total))
     for r in range(n_rows):
         table.rows[r].height = Emu(int(row_h * EMU_PER_IN))
@@ -275,7 +284,9 @@ def add_styled_table(slide, header: Sequence[str], rows: Sequence[Sequence],
 
     for ri, row in enumerate(rows, start=1):
         is_total = total_row and ri == n_rows - 1
-        for c, cell_val in enumerate(row):
+        # 헤더보다 셀이 많은 행(파서가 만든 들쭉날쭉한 표)이 들어와도
+        # 슬라이드를 잃지 않는다. 넘치는 칸은 그리지 않는다.
+        for c, cell_val in enumerate(row[:n_cols]):
             spec = cell_val if isinstance(cell_val, dict) else {'t': cell_val}
             fill = TOTAL_ROW if is_total else (HILITE if spec.get('hilite') else WHITE)
             color = WHITE if is_total else BLACK

@@ -23,8 +23,10 @@ def _output_filename(knowledge: CampaignKnowledge) -> str:
 
     규칙: YYMMDD_품목_자료명_v0_Cheil
     """
-    date = (knowledge.date_created or '').strip() or 'YYMMDD'
-    category = (knowledge.category or '').strip() or '품목'
+    from utils.errors import safe_filename_part
+    date = safe_filename_part(knowledge.date_created, fallback='YYMMDD',
+                              max_len=12)
+    category = safe_filename_part(knowledge.category, fallback='품목')
     return f"{date}_{category}_결과리포트_v0_Cheil"
 
 

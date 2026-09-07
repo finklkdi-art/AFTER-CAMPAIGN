@@ -59,6 +59,44 @@ _PARSE_HINTS: Tuple[Tuple[Tuple[str, ...], str], ...] = (
 _GENERIC = '파일을 읽지 못했어요.'
 
 
+# 파일명에 쓸 수 없는 문자 (Windows 기준이 가장 좁아 여기에 맞춘다)
+_FS_UNSAFE_RE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+# Windows 예약 장치명 — 확장자를 붙여도 만들 수 없다
+_FS_RESERVED = frozenset({
+    'con', 'prn', 'aux', 'nul',
+    *(f'com{i}' for i in range(1, 10)),
+    *(f'lpt{i}' for i in range(1, 10)),
+})
+
+
+def safe_filename_part(text, *, fallback: str = '미지정',
+                       max_len: int = 60) -> str:
+    """
+    파일명 한 조각을 저장 가능한 형태로 다듬는다.
+
+    출력물 이름은 `YYMMDD_품목_자료명_v0_Cheil` 규칙을 따르는데(claude.md 1.4),
+    이 중 **품목은 AE 가 직접 타이핑하는 값**이다. 'AV/VD' 처럼 슬래시가 들어간
+    품목명은 실무에서 흔한데, 그대로 경로에 넣으면 존재하지 않는 하위 폴더로
+    해석돼 저장이 실패한다. 리포트를 다 만들어 놓고 마지막 저장에서 터지는
+    것이라 사용자 입장에선 작업을 통째로 잃는 것과 같다.
+
+    금지문자는 지우지 않고 비슷한 전각 문자로 바꾼다 — 'AV/VD' 가 'AVVD' 가
+    되면 무슨 품목인지 알아볼 수 없기 때문이다.
+    """
+    s = str(text if text is not None else '').strip()
+    # 슬래시류는 의미가 남도록 중점으로, 나머지 금지문자는 제거
+    s = s.replace('/', '·').replace('\\', '·')
+    s = _FS_UNSAFE_RE.sub('', s)
+    s = re.sub(r'\s+', ' ', s).strip()
+    # 끝의 점·공백은 Windows 가 조용히 잘라내 이름이 어긋난다
+    s = s.rstrip('. ')
+    if s.lower() in _FS_RESERVED:
+        s = f'{s}_'
+    if len(s) > max_len:
+        s = s[:max_len].rstrip('. ')
+    return s or fallback
+
+
 def redact_paths(text) -> str:
     """메시지에 섞인 절대 경로를 파일명만 남기고 지운다."""
     s = str(text if text is not None else '')
