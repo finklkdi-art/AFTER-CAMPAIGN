@@ -26,3 +26,13 @@ anthropic>=0.40.0
 
 # --- MCP 서버: Lucide Icons 아이콘 검색 API ---
 httpx>=0.24.0           # 비동기 HTTP 클라이언트 (아이콘 데이터 다운로드)
+
+# ── 배포 메모 (Streamlit Community Cloud) ────────────────────────────────
+# 이 파일이 바뀌면 컨테이너가 의존성부터 다시 설치하며 **프로세스를 새로
+# 띄운다.** 그게 중요한 이유:
+#   Streamlit 은 새 커밋을 받아도 메인 스크립트(web_main.py)만 다시 실행하고,
+#   import 된 모듈(dashboard/theme_css.py 등)은 기동 시 sys.modules 에 캐시된
+#   객체를 계속 쓴다. 그래서 모듈 안의 상수(HERO_HTML·_BASE_CSS 같은 CSS/마크업)를
+#   고쳐 push 해도 화면에 반영되지 않고, 'Manage app → Reboot app' 이 필요하다.
+#   이 메모를 건드려 커밋하는 것은 그 Reboot 을 코드로 대신하는 수단이다.
+# 마지막 강제 재기동: 2026-09-08 (UI 전면 개편 배포)

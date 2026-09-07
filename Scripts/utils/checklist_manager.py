@@ -3,7 +3,7 @@
 Checklist Manager - Manage and format checklist items
 """
 
-from typing import List, Dict
+from typing import Any, Dict, List
 from models.checklist import ChecklistItem
 from models.campaign_knowledge import CampaignKnowledge
 
@@ -36,21 +36,43 @@ class ChecklistManager:
     @staticmethod
     def deduplicate_checklist(knowledge: CampaignKnowledge) -> None:
         """
-        Checklist에서 중복 항목을 제거합니다.
+        Checklist에서 중복 항목을 합칩니다.
+
+        같은 사건(type + message)이 여러 단계에서 보고될 수 있습니다.
+        예전에는 **먼저 온 것만 남기고 나머지를 버렸는데**, 뒤에 온 항목이
+        더 구체적인 detail 을 갖고 있으면 그 설명이 조용히 사라졌습니다
+        (claude.md 3.1 — 조용한 소실은 최악의 실패). 이제 항목을 버리지 않고
+        detail 을 이어 붙여 근거를 모두 보존합니다.
+
+        심각도가 서로 다르면 더 높은 쪽을 남깁니다 — 한쪽이 '꼭 확인'이라고
+        본 사건을 '참고'로 낮춰 보고하면 안 되기 때문입니다.
 
         Args:
             knowledge: CampaignKnowledge 객체
         """
         items = knowledge.validation['checklist_items']
-        unique_items = {}
+        merged: Dict[str, Any] = {}
+        order: List[str] = []
 
         for item in items:
             # 유니크 키: type + message
             key = f"{item.type}:{item.message}"
-            if key not in unique_items:
-                unique_items[key] = item
+            if key not in merged:
+                merged[key] = item
+                order.append(key)
+                continue
 
-        knowledge.validation['checklist_items'] = list(unique_items.values())
+            kept = merged[key]
+            new_detail = (getattr(item, 'detail', '') or '').strip()
+            old_detail = (getattr(kept, 'detail', '') or '').strip()
+            if new_detail and new_detail not in old_detail:
+                kept.detail = f'{old_detail} / {new_detail}' if old_detail else new_detail
+            # 심각도는 높은 쪽으로 끌어올린다
+            if (ChecklistManager.SEVERITY_ORDER.get(item.severity, 3)
+                    < ChecklistManager.SEVERITY_ORDER.get(kept.severity, 3)):
+                kept.severity = item.severity
+
+        knowledge.validation['checklist_items'] = [merged[k] for k in order]
 
     @staticmethod
     def get_checklist_summary(knowledge: CampaignKnowledge) -> Dict[str, int]:

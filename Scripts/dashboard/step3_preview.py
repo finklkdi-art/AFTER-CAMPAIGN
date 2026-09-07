@@ -135,10 +135,39 @@ def _first_editable(spec, registry) -> int:
     return 0
 
 
+# 레지스트리에 없는 구조 슬라이드(표지·목차·간지 등)의 화면 표기.
+# 예전에는 내부 키를 그대로 노출해 버튼에 'toc' · 'divider' 가 찍혔다.
+# 사용자에게 보이는 이름과 코드의 식별자는 분리한다.
+_KIND_LABEL = {
+    'cover': '표지',
+    'toc': '목차',
+    'divider': '간지',
+    'checklist': 'Checklist',
+    'summary': '집행 요약',
+    'eod': '마무리',
+    'quotes': '인용',
+    'insight': '인사이트',
+    'lesson': 'Lesson Learned',
+    'kpi': 'KPI 달성',
+    'roadmap': '집행 로드맵',
+    'strategy': '캠페인 전략',
+    'media_table': '매체별 성과',
+    'postbuy_table': '포스트바이 표',
+    'daily_trend': '일자별 추이',
+    'creative_cards': '소재별 결과',
+    'placement_cards': '게재 결과',
+    'ov_goal': '캠페인 목표',
+    'ov_strategy': '전략 방향',
+    'ov_roadmap': '캠페인 로드맵',
+}
+
+
 def _thumb_card(sl, spec, registry, i: int, sel: int) -> None:
     """썸네일 한 장 + 선택 버튼."""
     bd = registry.get(sl.block_id)
-    label = (bd.label if bd else '') or sl.kind or '슬라이드'
+    label = ((bd.label if bd else '')
+             or _KIND_LABEL.get(sl.kind, '')
+             or sl.kind or '슬라이드')
     st.markdown(
         f'<div class="ax-thumb {"on" if i == sel else ""}">'
         + SP.slide_html(sl, spec.campaign_tag, width=300, index=i + 1)

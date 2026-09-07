@@ -259,7 +259,7 @@ def generate(dataset: CampaignDataset, cfg: InsightConfig,
              excluded: List[str]) -> List[Insight]:
     rows = _creative_rows(dataset)
     if not rows:
-        excluded.append('크리에이티브 축 — 소재별 효율 표(axis=creative) 미확보')
+        excluded.append('크리에이티브 축 — 소재별 효율 표 미확보')
         return []
 
     out: List[Insight] = []

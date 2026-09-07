@@ -599,7 +599,7 @@ def _record_gap_decisions(knowledge: CampaignKnowledge, dataset) -> None:
                 severity='warning',
                 message=f'[기획자 확인] {gap.label} 미포함',
                 detail=(f'기획자가 건너뛰기로 결정했어요. '
-                        f'영향 블록: {", ".join(gap.affected_slides) or "-"} / 사유: {gap.reason}'),
+                        f'영향받는 슬라이드: {", ".join(gap.affected_slides) or "-"} / 사유: {gap.reason}'),
                 source='step2_verify:_record_gap_decisions',
             ))
         elif gap.resolution == GAP_FILLED:

@@ -14,7 +14,7 @@ import streamlit as st
 from models.campaign_data import (
     CampaignDataset, DataGap, GAP_FILLED, GAP_PENDING, GAP_SKIPPED,
 )
-from dashboard import state
+from dashboard import state, theme_css as T
 
 
 # 결손 입력 표의 기본 컬럼
@@ -35,13 +35,13 @@ def render_sources(dataset: CampaignDataset) -> None:
     st.subheader("데이터 원천")
 
     s = dataset.summary()
+    # 'Full / Lite' 는 내부 모드 이름이다. AE 에게는 '무엇이 있고 없는지'만
+    # 말하면 된다 — 제품 내부 용어를 화면에 노출하지 않는다.
     if dataset.mode == 'full':
-        st.success(
-            "**Full 모드** — 포스트바이가 있어서 확정 KPI·도달빈도·검색/버즈·AA 를 확보했어요.")
+        T.note('포스트바이가 있어서 확정 KPI까지 확보했어요.', 'ok')
     else:
-        st.warning(
-            "**Lite 모드** — 포스트바이가 없어서 미디어믹스와 데일리리포트로 구성했어요. "
-            "일부 항목은 아래 [결손 항목] 탭에서 직접 입력하시거나 건너뛰어 주세요.")
+        T.note('포스트바이가 없어서 미디어믹스와 데일리리포트로 구성했어요 — '
+               '확정 목표치는 [결손 항목]에서 직접 넣으실 수 있어요.', 'warn')
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("계획 라인", f"{s['plan_lines']:,}")
@@ -84,12 +84,14 @@ def render_sources(dataset: CampaignDataset) -> None:
     if rows:
         st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
     else:
-        st.error("뽑아낸 원천이 없어요. 1단계 파싱 결과를 확인해 주세요.")
+        T.note("읽어 온 표가 없어요 — 1단계에서 파일이 열렸는지 확인해 주세요.", "warn")
 
     if dataset.warnings:
-        st.markdown(f"###### 파서 경고 {len(dataset.warnings)}건")
+        st.markdown(f"###### 읽는 중 생긴 문제 {len(dataset.warnings)}건")
         for w in dataset.warnings:
-            st.caption(f"· {w}")
+            # 예외 원문에는 절대 경로와 `_`·`$` 가 섞여 들어온다. 경로는 파일명만
+            # 남기고, 마크다운 특수문자는 무해화한 뒤에 그린다.
+            st.caption('· ' + T.safe_md(T.strip_paths(w)))
 
 
 # ===================== 로드맵 =====================
@@ -101,7 +103,7 @@ def render_roadmap(dataset: CampaignDataset) -> None:
 
     lines = dataset.plan_lines()
     if not lines:
-        st.error("계획 라인이 없어요. [결손 항목] 탭에서 직접 입력해 주세요.")
+        T.note("계획 라인이 없어요 — [결손 항목]에서 직접 넣으실 수 있어요.", "warn")
         return
 
     df = pd.DataFrame([{
@@ -129,7 +131,7 @@ def render_kpi(dataset: CampaignDataset) -> None:
     st.subheader("KPI 목표")
 
     if dataset.mode == 'full' and dataset.postbuy:
-        st.success("포스트바이의 **확정 목표치**를 쓰고 있어요.")
+        T.note("포스트바이의 확정 목표치를 쓰고 있어요.", "ok")
         rows = [{
             '구분': k.scope, '매체': k.media, '상품': k.product, 'KPI': k.kpi_name,
             '목표': k.target, '실적': k.actual,
@@ -139,12 +141,10 @@ def render_kpi(dataset: CampaignDataset) -> None:
         st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
         return
 
-    st.warning(
-        "포스트바이가 없어서 **확정 목표치를 확보하지 못했어요.**\n\n"
-        "아래는 미디어믹스의 예상 성과라 **제안 시점 값**이에요. "
-        "부킹 후 조정된 확정 목표와 다를 수 있어서, 그대로 달성률을 내면 왜곡돼요. "
-        "[결손 항목] 탭에서 확정 목표를 입력하시거나 건너뛰어 주세요."
-    )
+    # 네 문장짜리 경고를 한 문장으로. 왜 위험한지는 바로 아래 표의 컬럼명
+    # ('제안 기준(참고)')과 캡션이 이미 말하고 있다.
+    T.note("확정 목표치가 없어서 아래는 제안 시점의 예상 성과예요 — "
+           "[결손 항목]에서 확정 목표를 넣으실 수 있어요.", "warn")
 
     if dataset.media_mix:
         t = dataset.media_mix.plan_totals()
@@ -201,7 +201,7 @@ def render_gaps(dataset: CampaignDataset) -> None:
         "직접 입력하실지 건너뛰실지 골라 주세요.")
 
     if not dataset.gaps:
-        st.success("자동으로 모두 채워졌어요. 따로 입력하실 게 없어요.")
+        T.note("자동으로 모두 채워졌어요. 따로 입력하실 게 없어요.", "ok")
         return
 
     pending = dataset.pending_gaps()
@@ -212,9 +212,8 @@ def render_gaps(dataset: CampaignDataset) -> None:
     c3.metric("진행 차단", len(blocking))
 
     if blocking:
-        st.error(
-            "다음 항목은 산출물 품질에 직접 영향을 줘요 — "
-            + ", ".join(g.label for g in blocking))
+        T.note("다음 항목은 보고서 품질에 직접 영향을 줘요 — "
+               + ", ".join(g.label for g in blocking), "warn")
 
     st.divider()
 
@@ -229,7 +228,7 @@ def render_gaps(dataset: CampaignDataset) -> None:
             st.markdown(f"**{header}**")
             st.caption(gap.reason)
             if gap.affected_slides:
-                st.caption(f"영향 블록: {' · '.join(gap.affected_slides)}")
+                st.caption(f"영향받는 슬라이드: {' · '.join(gap.affected_slides)}")
 
             prefix = f'gap_{gap.key}'
             options = ['미결정', '직접 입력', '건너뛰기']

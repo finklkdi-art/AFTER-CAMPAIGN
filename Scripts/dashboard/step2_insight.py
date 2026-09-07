@@ -187,7 +187,7 @@ def render(knowledge: CampaignKnowledge, dataset) -> bool:
         T.note('초안을 만들 만한 데이터가 없어 포스트바이 원문을 그대로 써요.',
                'warn')
         for reason in insight_set.excluded[:8]:
-            st.caption(f'· {reason}')
+            st.caption('· ' + T.safe_md(reason))
         # 도출이 0건이면 막지 않는다 (폴백 경로가 있으므로)
         return True
 
@@ -209,7 +209,7 @@ def render(knowledge: CampaignKnowledge, dataset) -> bool:
         st.markdown('###### 도출에서 빠진 항목')
         st.caption('Checklist 에 그대로 실려요.')
         for reason in insight_set.excluded[:10]:
-            st.caption(f'· {reason}')
+            st.caption('· ' + T.safe_md(reason))
         T.spacer(6)
 
     c1, c2 = st.columns([1, 1.6])

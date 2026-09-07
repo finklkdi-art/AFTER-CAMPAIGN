@@ -128,10 +128,13 @@ class InsightEngine:
         if left > 0:
             excluded.append(f'지면 제약으로 {left}건 제외 (총 {total}건 게재)')
 
+        # 하나도 못 고른 경우엔 이 줄을 만들지 않는다. 예전에는 빈 목록에도
+        # '게재 축 — ' 을 붙여, 화면에 대시로 끝나는 깨진 문장이 남았다.
         covered = sorted({i.axis for i in picked}, key=axes.sort_key)
-        excluded.append(
-            '게재 축 — ' + ' · '.join(f'{axes.code(a)} {axes.label(a)}'
-                                     for a in covered))
+        if covered:
+            excluded.append(
+                '게재 축 — ' + ' · '.join(f'{axes.code(a)} {axes.label(a)}'
+                                         for a in covered))
         return picked
 
     # ------------------------------------------------------------------

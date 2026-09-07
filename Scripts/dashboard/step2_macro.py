@@ -94,6 +94,36 @@ def _periods(knowledge: CampaignKnowledge, dataset) -> Dict[str, str]:
     return {'제안 기간': prop, '실집행(포스트바이)': post, '데일리리포트': daily}
 
 
+# 캠페인명 비교에서 걸러낼 흔한 낱말. 이런 것만 겹치는 건 '같은 캠페인'의
+# 근거가 못 된다 — 거의 모든 캠페인명에 들어 있기 때문이다.
+_NAME_STOPWORDS = frozenset({
+    '캠페인', '런칭', '삼성', '삼성전자', '비스포크', 'bespoke', 'ai',
+    '2025', '2026', '25년', '26년', '통합', '디지털', 'imc',
+})
+
+
+def _name_tokens(text: str) -> set:
+    """비교용 낱말 집합 — 괄호·기호를 떼고 흔한 낱말을 제외한다."""
+    import re
+    raw = re.split(r'[\s()\[\]{}·,/_\-]+', (text or '').lower())
+    return {t for t in raw if len(t) >= 2 and t not in _NAME_STOPWORDS}
+
+
+def _name_overlaps(typed: str, hints: List[str]) -> bool:
+    """
+    입력된 캠페인명이 문서 표기와 '같은 캠페인'으로 보이는가.
+
+    글자 단위 포함(`typed in hint`) 검사는 너무 빡빡했다. 폴더명
+    '(에어컨) 2025 AI 무풍콤보 런칭 캠페인' 과 문서 표기
+    '비스포크 AI 무풍콤보' 는 같은 캠페인인데도 불일치로 잡혔다.
+    특징적인 낱말이 하나라도 겹치면 같은 캠페인으로 본다.
+    """
+    t = _name_tokens(typed)
+    if not t:
+        return True          # 비교할 낱말이 없으면 경고하지 않는다
+    return any(t & _name_tokens(h) for h in hints)
+
+
 def _touch(key: str) -> None:
     st.session_state.setdefault(KEY_TOUCHED, set()).add(key)
 
@@ -170,12 +200,17 @@ def _render_meta(knowledge: CampaignKnowledge, dataset) -> None:
                       on_change=_touch, args=('overview',))
         if hints:
             st.caption('문서에서 읽은 표기(참고) · ' + '  |  '.join(hints))
-        # 표지에 찍힐 이름이라 문서와 다르면 한 번은 짚어 준다. AE 가 일부러
-        # 보고용 명칭을 따로 쓰는 경우도 많으므로 막지 않고 알리기만 한다.
+        # 표지에 찍힐 이름이라 문서와 크게 다르면 한 번은 짚어 준다.
+        #
+        # 예전엔 "입력하신 캠페인명 …" 이라고 했는데, 그 값은 AE 가 넣은 게
+        # 아니라 **앱이 폴더명에서 자동으로 채운 값**이었다. 손도 대지 않은
+        # 사용자에게 책임을 돌리는 문장이었던 셈이다. 게다가 폴더명과 문서
+        # 표기가 글자까지 똑같은 경우는 드물어서 정상 캠페인마다 경고가 떴다.
+        # 이제 낱말이 하나도 안 겹칠 때만, 사람을 탓하지 않는 문장으로 알린다.
         typed = (st.session_state.get(K_NAME) or '').strip()
-        if typed and hints and not any(typed in h for h in hints):
-            T.note(f'입력하신 캠페인명 "{typed}" 이 문서 표기와 달라요.',
-                   'warn')
+        if typed and hints and not _name_overlaps(typed, hints):
+            T.note('표지에 쓸 캠페인명이 문서 표기와 달라요 — '
+                   '의도한 이름이면 그대로 두셔도 돼요.', 'warn')
 
         st.markdown('##### 집행 기간')
         periods = _periods(knowledge, dataset)
@@ -186,7 +221,8 @@ def _render_meta(knowledge: CampaignKnowledge, dataset) -> None:
         # (claude.md 정체성), 어디서 채우는지까지 알려 줘야 한다.
         missing = [k for k, v in periods.items() if not v]
         if missing:
-            T.note(f'{" · ".join(missing)}을 못 읽었어요 — '
+            # 조사는 앞 낱말 받침에 따라 달라진다 — 박아 두지 않는다
+            T.note(f'{T.josa(" · ".join(missing), "을/를")} 못 읽었어요 — '
                    '아래 [수치 · KPI · 결손 항목]에서 넣으실 수 있어요.', 'warn')
         if len(set(vals)) > 1:
             T.note('원천별 기간 표기가 서로 달라요 — 양쪽 모두 보고서에 실어요.',
@@ -289,6 +325,124 @@ def _collect_meta() -> Dict[str, str]:
     }
 
 
+# ═══════════════════════════ 분석 결과 배너
+
+def _render_flash(flash) -> None:
+    """
+    1단계 분석 결과를 한 덩어리로 보여 준다.
+
+    예전에는 결과와 무관하게 `st.success`(초록)를 띄웠다. 한 글자도 못 읽은
+    경우까지 초록이면 색이 정보를 잃는다. 이제 등급(ok/warn/err)에 따라
+    색과 문장이 같이 바뀌고, 실패했을 때는 '무엇을 하면 되는지'까지 붙인다.
+    """
+    if not flash:
+        return
+    # 하위 호환 — 예전 형식(문자열)도 그대로 받는다
+    if isinstance(flash, str):
+        T.note(flash, 'ok')
+        return
+
+    level = flash.get('level', 'ok')
+    head = flash.get('headline', '')
+    detail = (flash.get('detail') or '').strip()
+    hint = (flash.get('hint') or '').strip()
+
+    body = head
+    if detail:
+        body += f' · {detail}'
+    T.note(body, {'ok': 'ok', 'warn': 'warn'}.get(level, 'err'))
+    if hint:
+        # 다음 행동은 경고 상자 안에 밀어 넣지 않고 바로 밑에 둔다 —
+        # 상자가 길어질수록 정작 '무엇을 하면 되는지' 가 안 읽힌다.
+        st.caption(hint)
+
+
+# ═══════════════════════════ Checklist (표시용 묶음)
+
+# 화면에 한 번에 펼칠 최대 줄 수. 이 아래로는 '외 N건'으로 접는 게 아니라
+# 개수만 알리고 나머지는 보고서 Checklist 슬라이드가 받는다 (claude.md 3.4).
+_CHECKLIST_SHOWN = 12
+
+_SEV_KO = {'error': '꼭 확인', 'warning': '권고', 'info': '참고'}
+_SEV_LVL = {'error': 'err', 'warning': 'warn'}
+
+
+def _group_items(items) -> List[dict]:
+    """
+    같은 원인의 항목을 한 줄로 묶는다.
+
+    실제로 겪은 화면: 파일 6개가 전부 사내 문서보안에 걸리자 200자짜리 같은
+    안내가 여섯 번 반복돼 1,200자가 깔렸다. 원인은 하나인데 여섯 줄을 읽혀선
+    안 된다. 묶는 건 **표시**만이고 원본 항목은 그대로 남아 보고서 Checklist
+    슬라이드에 전부 실린다 (claude.md 3.1 — 화면 축약과 저장 원본의 분리).
+
+    묶음 키는 (심각도, 유형, 상세문구)다. 상세가 같으면 같은 사건으로 본다.
+    """
+    groups: Dict[tuple, dict] = {}
+    order: List[tuple] = []
+    for it in items:
+        detail = (getattr(it, 'detail', '') or '').strip()
+        key = (it.severity, getattr(it, 'type', ''), detail)
+        if key not in groups:
+            groups[key] = {'severity': it.severity, 'detail': detail,
+                           'messages': [], 'subjects': []}
+            order.append(key)
+        g = groups[key]
+        g['messages'].append(it.message)
+        # '파일 파싱 실패: a.pdf' → 'a.pdf' 만 뽑아 대상 목록을 만든다
+        subject = it.message.split(':', 1)[1].strip() if ':' in it.message else ''
+        if subject:
+            g['subjects'].append(subject)
+    return [groups[k] for k in order]
+
+
+def _render_checklist(items) -> None:
+    if not items:
+        return
+
+    rank = {'error': 0, 'warning': 1, 'info': 2}
+    groups = sorted(_group_items(items),
+                    key=lambda g: rank.get(g['severity'], 3))
+
+    n_err = sum(1 for x in items if x.severity == 'error')
+    n_warn = sum(1 for x in items if x.severity == 'warning')
+    n_info = len(items) - n_err - n_warn
+
+    st.markdown(f'#### 확인 필요 사항 {len(items)}건')
+    head = []
+    if n_err:
+        head.append(f'꼭 확인 {n_err}건')
+    if n_warn:
+        head.append(f'권고 {n_warn}건')
+    if n_info:
+        head.append(f'참고 {n_info}건')
+    st.caption(' · '.join(head) + ' — 보고서 1페이지 Checklist 에 실려요.')
+
+    for g in groups[:_CHECKLIST_SHOWN]:
+        tag = _SEV_KO.get(g['severity'], g['severity'])
+        # 참고(info)는 라임이 아니라 조용한 면으로 — 라임은 '잘 됐다'는
+        # 뜻이라 단순 참고 항목에 쓰면 신호가 뒤집힌다.
+        lvl = _SEV_LVL.get(g['severity'], 'info')
+        n = len(g['messages'])
+
+        if n == 1:
+            T.note(f'[{tag}] {g["messages"][0]}', lvl)
+        else:
+            # 대표 문구에서 뒤쪽 대상만 떼어내고 앞부분을 제목으로 쓴다
+            headline = g['messages'][0].split(':', 1)[0].strip()
+            T.note(f'[{tag}] {headline} — {n}건', lvl)
+            if g['subjects']:
+                st.caption('　' + T.safe_md(' · '.join(g['subjects'])))
+
+        detail = g['detail']
+        if detail and g['severity'] in ('error', 'warning'):
+            st.caption('　' + T.safe_md(T.strip_paths(detail))[:260])
+
+    hidden = len(groups) - _CHECKLIST_SHOWN
+    if hidden > 0:
+        st.caption(f'외 {hidden}건은 보고서 Checklist 슬라이드에 실려요.')
+
+
 # ═══════════════════════════ 진입점
 
 def render(project_root: Path) -> None:
@@ -302,10 +456,8 @@ def render(project_root: Path) -> None:
 
     dataset = state.get(state.KEY_DATASET)
 
-    flash = state.get(state.KEY_FLASH)
-    if flash:
-        st.success(flash)
-        state.put(state.KEY_FLASH, None)   # 한 번만 보여준다
+    _render_flash(state.get(state.KEY_FLASH))
+    state.put(state.KEY_FLASH, None)       # 한 번만 보여준다
 
     warns = state.get('ax_upload_warnings') or []
     if warns:
@@ -322,38 +474,7 @@ def render(project_root: Path) -> None:
     st.divider()
 
     # ── Checklist 미리보기 (막지 않고 보여주기만)
-    items = knowledge.get_checklist_items()
-    if items:
-        # 심각도 순으로 세운다. 13건이 같은 무게로 나열되면 error 2건이
-        # info 사이에 묻혀, 정작 손봐야 할 것을 지나치게 된다.
-        rank = {'error': 0, 'warning': 1, 'info': 2}
-        ordered = sorted(items, key=lambda x: rank.get(x.severity, 3))
-        n_err = sum(1 for x in items if x.severity == 'error')
-        n_warn = sum(1 for x in items if x.severity == 'warning')
-
-        st.markdown(f'#### 확인 필요 사항 {len(items)}건')
-        head = []
-        if n_err:
-            head.append(f'꼭 확인 {n_err}건')
-        if n_warn:
-            head.append(f'권고 {n_warn}건')
-        head.append(f'참고 {len(items) - n_err - n_warn}건')
-        st.caption(' · '.join(head) + ' — 보고서 1페이지 Checklist 에 실려요.')
-
-        # 영문 severity 는 실무자에게 바로 읽히지 않는다.
-        korean = {'error': '꼭 확인', 'warning': '권고', 'info': '참고'}
-        for it in ordered[:40]:
-            # 참고(info)는 라임이 아니라 조용한 면으로 — 라임은 '잘 됐다'는
-            # 뜻이라 단순 참고 항목에 쓰면 신호가 뒤집힌다.
-            lvl = {'error': 'err', 'warning': 'warn'}.get(it.severity, 'info')
-            tag = korean.get(it.severity, it.severity)
-            T.note(f'[{tag}] {it.message}', lvl)
-            # 왜 그런지가 있어야 손을 댈 수 있다. message 만으로는 부족하다.
-            detail = (getattr(it, 'detail', '') or '').strip()
-            if detail and it.severity in ('error', 'warning'):
-                st.caption(f'　{detail[:220]}')
-        if len(items) > 40:
-            st.caption(f'… 외 {len(items) - 40}건')
+    _render_checklist(knowledge.get_checklist_items())
 
     # ── 상세 검증 — 제거하지 않고 보존 (Rule Book 2.3 안전장치 1)
     st.markdown('#### 수치 · KPI · 결손 항목')

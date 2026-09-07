@@ -143,8 +143,10 @@ def _analyze_dialog(folder: Path, project_root: Path, *, label: str,
             st.rerun()
         return
 
+    outcome = _outcome(knowledge, dataset)
+
     bar.progress(1.0, text='')
-    status.markdown('##### 분석 완료')
+    status.markdown(f'##### {outcome["headline"]}')
     detail.empty()
 
     state.set_knowledge(knowledge)
@@ -153,18 +155,80 @@ def _analyze_dialog(folder: Path, project_root: Path, *, label: str,
     state.put(state.KEY_SCAN_LOG, log.getvalue())
     state.put(state.KEY_SPEC, None)   # 새 파싱 — 이전 초안 폐기
 
-    s = dataset.summary()
-    flash = (f'{label} — 문서 {len(knowledge.documents)}건 · '
-             f'계획 라인 {s["plan_lines"]:,}건 · '
-             f'일자별 실적 {s["daily_rows"]:,}일')
     if warns:
         # 업로드 경고를 조용히 버리지 않는다 (claude.md 3.1)
-        flash += f' · 업로드 경고 {len(warns)}건'
         state.put('ax_upload_warnings', warns)
+        outcome['detail'] += f' · 업로드 경고 {len(warns)}건'
 
-    state.put(state.KEY_FLASH, flash)
+    state.put(state.KEY_FLASH, outcome)
     state.goto_step(2)
     st.rerun()
+
+
+# ═══════════════════════════ 분석 결과 등급
+
+def _outcome(knowledge, dataset) -> dict:
+    """
+    분석 결과를 **사람 기준**으로 등급화한다.
+
+    기존에는 결과와 무관하게 초록색 '분석 완료' 를 띄웠다. 파일이 전부
+    사내 문서보안(DRM)에 걸려 한 글자도 못 읽은 경우조차 '완료 — 계획 라인
+    0건' 이라고 말해서, AE 는 잘 된 줄 알고 빈 리포트까지 갔다. 성공처럼
+    보이는 실패가 가장 나쁜 실패다 — 숫자를 하나도 못 건졌으면 그렇다고
+    말한다 (claude.md 3.3 · 추측성 긍정 포장 금지).
+
+    Returns:
+        {'level': ok|warn|err, 'headline': 한 줄, 'detail': 보조 한 줄,
+         'hint': 다음 행동(있을 때만)}
+    """
+    s = dataset.summary()
+    docs = list(getattr(knowledge, 'documents', []) or [])
+    failed = [d for d in docs if getattr(d, 'status', '') == 'error']
+    n_all, n_bad = len(docs), len(failed)
+
+    # '쓸 수 있는 숫자를 건졌는가' 가 성공의 기준이다. 문서를 몇 개 열었는지가
+    # 아니라 — 리포트에 들어갈 값이 나왔는지가 AE 에게 중요한 사실이다.
+    numbers = (s['plan_lines'] + s['daily_rows']
+               + s['media_performance'] + s['kpi_targets'])
+
+    detail = (f'계획 라인 {s["plan_lines"]:,}건 · '
+              f'일자별 실적 {s["daily_rows"]:,}일 · '
+              f'매체 실적 {s["media_performance"]:,}건')
+
+    if numbers == 0:
+        hint = _fail_hint(failed)
+        if n_bad and n_bad == n_all:
+            head = f'{n_all}개 파일을 모두 읽지 못했어요'
+        elif n_bad:
+            head = f'읽을 수 있는 수치가 없어요 — 파일 {n_bad}건이 열리지 않았어요'
+        else:
+            head = '파일은 열렸지만 성과 수치를 찾지 못했어요'
+        return {'level': 'err', 'headline': head, 'detail': detail, 'hint': hint}
+
+    if n_bad:
+        return {'level': 'warn',
+                'headline': f'문서 {n_all - n_bad}건을 읽었어요 · {n_bad}건은 열지 못했어요',
+                'detail': detail, 'hint': _fail_hint(failed)}
+
+    return {'level': 'ok',
+            'headline': f'문서 {n_all}건을 읽었어요',
+            'detail': detail, 'hint': ''}
+
+
+def _fail_hint(failed) -> str:
+    """
+    실패 사유가 한 가지로 모이면 그 한 가지만 말한다.
+
+    같은 사유 여섯 줄보다 '여섯 건 다 같은 이유' 한 줄이 훨씬 빨리 읽힌다.
+    """
+    if not failed:
+        return ''
+    reasons = [(getattr(d, 'error_msg', '') or '') for d in failed]
+    if any('문서보안' in r or 'DRM' in r.upper() or 'NASCA' in r.upper()
+           for r in reasons):
+        return ('사내 문서보안(DRM)이 걸린 파일이에요. '
+                '파일 우클릭 → 문서보안 해제 후 다시 올려 주세요.')
+    return '파일이 손상됐거나 지원하지 않는 형식일 수 있어요.'
 
 
 # ═══════════════════════════ 업로드 (주 동선)
@@ -238,21 +302,21 @@ def _list_campaign_folders(input_dir: Path) -> List[Tuple[str, Path]]:
 
 def _render_folder(project_root: Path) -> None:
     try:
-        folders = _list_campaign_folders(project_root / 'Input')
+        folders = _list_campaign_folders(_source_root(project_root) / 'Input')
     except OSError:
         folders = []
     if not folders:
-        st.caption('이 PC의 `Input/` 폴더에 캠페인 폴더가 없어요. '
-                   '위쪽 업로드를 이용해 주세요.')
         return
 
     labels = [x for x, _ in folders]
     idx = next((i for i, x in enumerate(labels) if '★' in x), 0)
-    chosen = st.selectbox('캠페인 폴더', labels, index=idx)
+    chosen = st.selectbox('캠페인 폴더', labels, index=idx,
+                          label_visibility='collapsed')
     path = dict(zip(labels, [p for _, p in folders]))[chosen]
 
-    if st.button('이 폴더로 분석 시작', width='stretch'):
-        _analyze_dialog(path, project_root, label='폴더 분석 완료')
+    if st.button('이 폴더로 시작하기', width='stretch'):
+        _analyze_dialog(path, _source_root(project_root),
+                        label='폴더 분석 완료')
 
 
 # ═══════════════════════════ 이어하기
@@ -298,14 +362,46 @@ def _restore(dataset_path: str) -> None:
 
 # ═══════════════════════════ 진입점
 
+def _source_root(project_root: Path) -> Path:
+    """
+    `Input/` 을 찾을 기준 경로.
+
+    호출부가 넘기는 `project_root` 는 세션 샌드박스다(web_main). 샌드박스에는
+    `Input/` 심볼릭 링크를 걸어 두게 되어 있는데, Windows 에서는 링크 생성에
+    권한이 필요해 조용히 실패한다(WinError 1314). 그래서 링크에 기대지 않고
+    실제 프로젝트 루트를 직접 본다 — `Input/` 은 읽기 전용 원본이라
+    샌드박스 격리(디스크 '쓰기' 를 가두는 장치)와 어긋나지 않는다.
+    """
+    real = state.get(state.KEY_PROJECT_ROOT)
+    return Path(real) if real else Path(project_root)
+
+
+def _has_local_campaigns(project_root: Path) -> bool:
+    """`Input/` 에 실제로 캠페인 폴더가 있는지 — 조건부 노출의 기준."""
+    try:
+        return bool(_list_campaign_folders(_source_root(project_root) / 'Input'))
+    except OSError:
+        return False
+
+
 def render(project_root: Path) -> None:
     """
     자료 업로드 화면.
 
-    2026.09.07 — 보조 동선(`Input/` 캠페인 폴더 선택 · 이전 작업 이어하기)을
-    화면에서 제거했다. 업로드 하나로 동선을 단일화하기 위한 결정이며,
-    구현부(`_render_folder` / `_render_resume`)는 되살릴 수 있도록 남겨 둔다.
-    스냅샷 '저장'은 감사(audit) 목적이라 그대로 동작한다 (claude.md 4) —
-    없어진 것은 그 스냅샷을 화면에서 되불러오는 경로뿐이다.
+    2026.09.07 — 업로드를 주 동선으로 단일화했다. 보조 동선인 `Input/` 캠페인
+    폴더 선택(claude.md 2 의 지원 입력 경로)은 **폴더가 실제로 있을 때만**
+    화면에 나타난다. 호스팅 서버에는 `Input/` 이 없으므로 배포 화면은 업로드
+    하나로 유지되고, 로컬에서 도는 AE 만 폴더 선택을 보게 된다.
+    조건부로 두는 이유는 단순함 때문이다 — 쓸 수 없는 선택지를 늘 띄워 두면
+    화면만 복잡해지고 '이건 왜 안 되지' 하는 질문을 만든다.
+    '이전 작업 이어하기'(`_render_resume`)는 되살릴 수 있도록 남겨만 둔다.
     """
     _render_upload(project_root)
+
+    if _has_local_campaigns(project_root):
+        T.spacer(28)
+        st.markdown('<div class="ax-alt-sep"><span>또는</span></div>',
+                    unsafe_allow_html=True)
+        st.markdown('<div class="ax-sec-h">이 PC의 캠페인 폴더에서 고르기</div>',
+                    unsafe_allow_html=True)
+        _render_folder(project_root)

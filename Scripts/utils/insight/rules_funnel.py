@@ -242,7 +242,7 @@ def generate(dataset: CampaignDataset, cfg: InsightConfig,
     out: List[Insight] = []
     for fn, why in (
             (lambda: _kpi_funnel(dataset, cfg), 'KPI 퍼널 단계 2개 미만 또는 편차 기준 미달'),
-            (lambda: _purpose_efficiency(dataset, cfg), '목적(purpose)별 실적 비교 대상 부족'),
+            (lambda: _purpose_efficiency(dataset, cfg), '목적별 실적 비교 대상 부족'),
             (lambda: _click_to_visit(dataset, cfg), 'Click 대비 Visit 전환율 문구 미확보')):
         try:
             ins = fn()

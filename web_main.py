@@ -272,11 +272,11 @@ def render_landing() -> None:
     # 넣어 중앙 정렬과 여백 리듬이 틀어진다.
     st.markdown(T.HERO_HTML, unsafe_allow_html=True)
 
-    spacer(14)
+    spacer(40)
 
-    # 버튼도 히어로와 같은 축에 정렬한다. 가운데 칼럼을 좁게 잡아야
-    # 버튼 폭이 본문 폭과 어긋나지 않는다.
-    _, mid, _ = st.columns([1, 1, 1])
+    # 버튼은 히어로와 같은 축에 둔다. 가운데 칼럼을 좁게 잡아야 CTA 가
+    # 배너처럼 퍼지지 않고 '누르는 것' 크기로 남는다.
+    _, mid, _ = st.columns([1, 1.05, 1])
     with mid:
         if st.button('입장하기', type='primary', key='after_cta',
                      width='stretch'):

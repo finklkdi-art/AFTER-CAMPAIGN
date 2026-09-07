@@ -79,7 +79,7 @@ def topbar(on_home: Callable[[], None], *, campaign: str = '') -> None:
         on_home: 대문 이동 확정 시 실행할 콜백 (다이얼로그 통과 후)
         campaign: 우측에 표시할 현재 캠페인명
     """
-    cols = st.columns([3, 7])
+    cols = st.columns([4, 6], vertical_alignment='center')
 
     with cols[0]:
         # 로고는 버튼이다 — 링크가 아니라 버튼이라야 이탈 방지 다이얼로그를
@@ -94,7 +94,9 @@ def topbar(on_home: Callable[[], None], *, campaign: str = '') -> None:
         st.markdown(f'<div class="ax-topmeta">{chip}</div>',
                     unsafe_allow_html=True)
 
-    st.markdown('<div class="ax-topline"></div>', unsafe_allow_html=True)
+    # 굵은 잉크 선 대신 머리카락 굵기의 경계 하나. 상단 바는 자기 존재를
+    # 알리는 자리가 아니라 본문이 시작하는 지점을 표시하는 자리다.
+    st.markdown('<div class="ax-topsep"></div>', unsafe_allow_html=True)
 
 
 def steps(labels: Sequence[str], current: int) -> None:
@@ -105,8 +107,14 @@ def steps(labels: Sequence[str], current: int) -> None:
 def page_title(title: str, sub: str = '') -> None:
     """
     본문 최상단 제목. 상단 바가 브랜드를 맡으므로 여기는 '지금 할 일'만 쓴다.
+
+    `sub` 에 이미 `<span class="kbr">` 같은 마크업이 들어 있으면 그대로
+    통과시킨다. 한국어 줄바꿈을 절 경계에서 잡으려면 호출부가 마크업으로
+    의미 단위를 묶어야 하는데(claude.md 5), 여기서 통째로 이스케이프하면
+    그 방법이 막힌다. 마크업이 없는 평문은 지금까지처럼 이스케이프한다.
     """
+    safe_sub = sub if '<span' in sub or '<br' in sub else _esc(sub)
     st.markdown(
         f'<h2 class="ax-h">{_esc(title)}</h2>'
-        + (f'<p class="ax-hsub">{_esc(sub)}</p>' if sub else ''),
+        + (f'<p class="ax-hsub">{safe_sub}</p>' if sub else ''),
         unsafe_allow_html=True)

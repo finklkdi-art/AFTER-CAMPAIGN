@@ -214,13 +214,29 @@ class DataScanning:
             for root, dirs, files in os.walk(folder_path):
                 for file in files:
                     file_path = os.path.join(root, file)
-                    # 숨김 파일 제외
-                    if not file.startswith('.'):
-                        all_files.append(file_path)
+                    if DataScanning._is_ignorable(file):
+                        continue
+                    all_files.append(file_path)
         except Exception as e:
             print(f"파일 스캔 중 오류: {str(e)}")
 
         return all_files
+
+    # 열려 있는 Office 문서가 옆에 만들어 두는 잠금·임시 파일들.
+    # 이름만 실제 문서와 똑같아서 파서가 붙잡고 열려다 Permission denied 로
+    # 죽고, 그 예외가 원본 경로째로 화면에 노출됐다. 애초에 집지 않는다.
+    _IGNORED_PREFIXES = ('.', '~$', '~')
+    _IGNORED_NAMES = frozenset({'thumbs.db', 'desktop.ini', '.ds_store'})
+
+    @staticmethod
+    def _is_ignorable(file_name: str) -> bool:
+        """스캔에서 건너뛸 파일인가 (잠금·임시·OS 부산물)."""
+        name = (file_name or '').strip()
+        if not name:
+            return True
+        if name.lower() in DataScanning._IGNORED_NAMES:
+            return True
+        return name.startswith(DataScanning._IGNORED_PREFIXES)
 
 
 def run_step1(campaign_folder_path: str,

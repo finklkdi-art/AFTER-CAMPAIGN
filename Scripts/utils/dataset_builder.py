@@ -105,11 +105,16 @@ class CampaignDatasetBuilder:
         if intent.is_thin():
             detail.append('추출된 내용이 빈약해 슬라이드에 작성 가이드를 넣었음')
 
+        # type·message 를 data_scanning / blocks 의 같은 사건과 정확히 일치시킨다.
+        # 중복 제거 키가 `type:message` 라서(checklist_manager), 여기만 이모지나
+        # 하이픈이 달라도 같은 사건이 화면에 두 줄로 뜬다. 실제로 그렇게 떴다.
+        # 구체적인 누락 항목은 message 가 아니라 detail 로 내린다.
+        if missing:
+            detail.append(f'누락 {", ".join(missing)}')
         knowledge.add_checklist_item(ChecklistItem(
-            type='overview_source_missing',
+            type='overview_missing',
             severity='warning',
-            message=("⚠️ '캠페인 개요(목표/전략/로드맵)' 소스 누락 - 수기 작성 요망"
-                     + (f' — 누락 {", ".join(missing)}' if missing else '')),
+            message="'캠페인 개요(목표/전략/로드맵)' 소스 누락 — 수기 작성 요망",
             detail=' / '.join(detail),
             source='Stage 2 기획 의도 추출',
         ))
@@ -239,11 +244,14 @@ class CampaignDatasetBuilder:
     def _report_to_checklist(knowledge: CampaignKnowledge,
                              dataset: CampaignDataset) -> None:
         """결손과 경고를 Checklist 에 반영한다 (조용한 소실 금지)"""
-        mode_label = '포스트바이 포함(Full)' if dataset.mode == 'full' else '포스트바이 없음(Lite)'
+        # 'Full / Lite' 는 내부 모드 이름이다. Checklist 는 보고서 1페이지에
+        # 그대로 실려 광고주도 보게 되므로, 제품 내부 용어를 남기지 않는다.
+        mode_label = ('포스트바이를 포함해 구성' if dataset.mode == 'full'
+                      else '포스트바이 없이 구성')
         knowledge.add_checklist_item(ChecklistItem(
             type='dataset_mode',
             severity='info',
-            message=f'데이터 구성 모드: {mode_label}',
+            message=f'데이터 구성: {mode_label}',
             detail='; '.join(f'{k}={v}' for k, v in dataset.summary().items()),
             source='dataset_builder:build',
         ))
@@ -253,7 +261,7 @@ class CampaignDatasetBuilder:
                 type=f'data_gap:{gap.key}',
                 severity='error' if gap.severity == 'blocking' else 'warning',
                 message=f'자동 추출 실패: {gap.label}',
-                detail=f'{gap.reason} / 영향 블록: {", ".join(gap.affected_slides) or "-"}',
+                detail=f'{gap.reason} / 영향받는 슬라이드: {", ".join(gap.affected_slides) or "-"}',
                 source='dataset_builder:_collect_gaps',
             ))
 
