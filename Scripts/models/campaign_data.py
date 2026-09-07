@@ -131,6 +131,44 @@ class MediaPerformance:
 
 
 @dataclass
+class MediaSpend:
+    """
+    매체비 총합 — 집행이 끝난 뒤의 문서에서만 가져온 값.
+
+    보고서에서 가장 자주 인용되는 단 하나의 숫자라, 어디서 왔고 무엇으로
+    검증됐는지를 값과 함께 들고 다닌다. 검증에 실패하면 임의로 하나를
+    고르지 않고 두 값을 모두 남긴다 (claude.md 3.2).
+
+    출처 우선순위
+      1순위  데일리리포트 안 `Media Mix` 시트의 총계 행
+      검증   포스트바이 `Campaign Summary` 표의 Total 행
+
+    🔴 제안서·별도 미디어믹스(제안 시점) 예산은 쓰지 않는다. 부킹 전 숫자라
+       집행 결과 보고서에 실으면 사실과 달라진다.
+    """
+    total: Optional[float] = None
+    by_media: Dict[str, float] = field(default_factory=dict)
+    basis: str = ""                  # grand_total_row | header_cell | media_sum
+    source_label: str = ""           # 파일명:시트
+    verified_value: Optional[float] = None
+    verified_source: str = ""
+    confidence: str = "none"         # high | medium | low | none
+    note: str = ""
+
+    def is_verified(self) -> bool:
+        """서로 다른 두 문서가 같은 값을 말하는가."""
+        if self.total is None or self.verified_value is None:
+            return False
+        return abs(self.total - self.verified_value) <= max(1.0, self.total * 0.001)
+
+    def mismatch(self) -> Optional[float]:
+        """두 출처의 차이 (검증값이 없으면 None)."""
+        if self.total is None or self.verified_value is None:
+            return None
+        return self.verified_value - self.total
+
+
+@dataclass
 class DailyReportResult:
     """데일리리포트 파싱 결과"""
     campaign: str = ""
@@ -146,6 +184,8 @@ class DailyReportResult:
     media_names: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     source_file: str = ""
+    # Media Mix 시트에서 읽은 매체비 총합 (집행 이후 기준)
+    media_spend: Optional[MediaSpend] = None
 
 
 # ===================== 포스트바이 =====================
@@ -189,6 +229,10 @@ class PostbuyResult:
     lesson_learned: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     source_file: str = ""
+    # Campaign Summary 표의 Total 행 — 매체비 총합 교차 검증용.
+    # 매체별 행을 더해 만든 값과 달리 문서가 직접 말해 주는 숫자다.
+    summary_total_budget: Optional[float] = None
+    summary_total_source: str = ""
 
     def sections_of(self, kind: str) -> List[PostbuySection]:
         return [s for s in self.sections if s.kind == kind]
@@ -381,6 +425,22 @@ class CampaignDataset:
     intent: CampaignIntent = field(default_factory=CampaignIntent)
 
     # ---------- 조회 ----------
+
+    def media_spend(self) -> Optional['MediaSpend']:
+        """
+        매체비 총합 — 화면과 보고서가 함께 쓰는 **단일 출처**.
+
+        여기 한 곳으로 모은 이유: 예전에는 화면이 매체별 행을 더해서,
+        보고서는 데일리리포트 Total 행을 써서 서로 다른 숫자를 보여 줬다.
+        같은 캠페인에서 화면 4.8억 · 보고서 4.77억 · 실제 매체비 3.95억이
+        동시에 존재했다. 값은 한 군데서만 정해야 한다.
+
+        None 이면 집행 이후 문서에서 매체비를 찾지 못한 것이다. 그때는
+        추정하지 말고 '—' 로 두어야 한다 (claude.md 3.3).
+        """
+        dr = self.daily_report
+        spend = getattr(dr, 'media_spend', None) if dr else None
+        return spend if (spend and spend.total) else None
 
     def gap(self, key: str) -> Optional[DataGap]:
         for g in self.gaps:

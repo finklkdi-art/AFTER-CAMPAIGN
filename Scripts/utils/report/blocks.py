@@ -1549,10 +1549,22 @@ class ReportSpecBuilder:
         if not dr or dr.total.spend is None:
             return None
         t = dr.total
+
+        # 🔴 헤드라인 금액은 '매체비 총합'이다.
+        #
+        # 예전에는 데일리리포트 Total 행의 집행 금액(t.spend)을 그대로 썼다.
+        # 실측 캠페인에서 그 값은 476,725,145원이었지만 실제 매체비는
+        # 395,170,000원이었다 — 두 숫자는 다른 것을 뜻하는데 한 자리에서
+        # 섞여 쓰였다. 집행 이후 문서(Media Mix 시트 · 포스트바이 총계)에서
+        # 확정한 매체비가 있으면 그것을 쓰고, 없을 때만 종전 값으로 물러난다.
+        spend_info = dataset.media_spend()
+        headline_amount = spend_info.total if spend_info else t.spend
+        headline_label = '매체비' if spend_info else '집행 금액'
+
         parts = [
             {'text': '총 '},
-            {'text': fmt.krw_eok(t.spend), 'emph': True},
-            {'text': ' 운영  /  총 노출 '},
+            {'text': fmt.krw_eok(headline_amount), 'emph': True},
+            {'text': f' {headline_label}  /  총 노출 '},
             {'text': f'{fmt.count_korean(t.impressions)}회', 'emph': True},
         ]
         if t.views:
@@ -1564,7 +1576,7 @@ class ReportSpecBuilder:
         parts.append({'text': ' 달성'})
 
         cards = [
-            ('집행 금액', fmt.krw_eok(t.spend)),
+            (headline_label, fmt.krw_eok(headline_amount)),
             ('노출', f'{fmt.count_korean(t.impressions)}회'),
             ('조회', f'{fmt.count_korean(t.views)}회' if t.views else '-'),
             ('클릭', f'{fmt.count_korean(t.clicks)}회' if t.clicks else '-'),
@@ -1572,6 +1584,14 @@ class ReportSpecBuilder:
         notes = [f'자료원: {dr.source_file} (최종 데일리 리포트 기준 데이터)']
         if dr.period_raw:
             notes.insert(0, f'기간: {dr.period_raw}')
+        # 매체비는 어느 문서의 어느 표에서 왔는지 반드시 병기한다 (claude.md 3.2)
+        if spend_info:
+            cite = f'매체비: {spend_info.source_label or "집행 결과 문서"}'
+            if spend_info.is_verified():
+                cite += ' (포스트바이 총계와 일치)'
+            elif spend_info.note:
+                cite += f' — {spend_info.note}'
+            notes.append(cite)
         return SlideSpec('summary', {
             'section': '캠페인 운영 요약',
             'key_parts': parts,

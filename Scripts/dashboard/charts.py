@@ -115,11 +115,22 @@ def media_names(dataset) -> List[str]:
     return seen
 
 
+# 계획과 나란히 놓아도 되는 지표.
+# 매체비(예산)는 여기 없다 — 계획 예산은 제안 시점 값이라 집행 결과와
+# 대조하면 사실과 다른 증감이 만들어진다 (2026.09.08 제거).
+_COMPARABLE_METRICS = ('노출',)
+
+
 # ═══════════════════════════ 차트
 
-def budget_pie(df: pd.DataFrame, column: str = '계획예산',
+def budget_pie(df: pd.DataFrame, column: str = '실집행비',
                height: int = 300) -> None:
-    """매체별 비중 도넛 — 예산 쏠림을 한눈에"""
+    """
+    매체별 집행 비중 도넛.
+
+    기본값이 '계획예산'이었는데, 그건 제안 시점 미디어믹스의 값이라 집행
+    결과 화면에 실을 근거가 못 된다. 실제로 집행된 금액 기준으로 바꿨다.
+    """
     data = df[df[column] > 0][['매체', column]]
     if data.empty:
         T.note(f'{column} 데이터가 없어 비중 차트는 그리지 않았어요.', 'warn')
@@ -149,9 +160,16 @@ def budget_pie(df: pd.DataFrame, column: str = '계획예산',
 
 def plan_vs_actual_bar(df: pd.DataFrame, metric: str = '노출',
                        height: int = 320) -> None:
-    """매체별 계획 vs 실집행 그룹 막대"""
-    plan_col, act_col = ((f'계획{metric}', f'실집행{metric}')
-                         if metric == '노출' else ('계획예산', '실집행비'))
+    """
+    매체별 계획 vs 실집행 그룹 막대 — **성과 지표만** 비교한다.
+
+    매체비(예산) 비교는 뺐다. 계획 예산은 제안 시점 값이라 부킹 뒤 실제와
+    다르고, 그 차이를 '증감'처럼 보여 주면 사실과 어긋난 해석을 만든다.
+    """
+    if metric not in _COMPARABLE_METRICS:
+        T.note(f'{metric}은(는) 계획 대비 비교 대상이 아니에요.', 'info')
+        return
+    plan_col, act_col = f'계획{metric}', f'실집행{metric}'
     if plan_col not in df.columns or act_col not in df.columns or df.empty:
         T.note('비교할 계획·실적 데이터가 없어요.', 'warn')
         return
@@ -215,64 +233,77 @@ def campaign_actuals(dataset) -> Dict[str, Optional[float]]:
             'impressions': float(t.impressions or 0) or None}
 
 
+def media_spend_of(dataset):
+    """
+    집행 이후 문서에서 확정한 매체비 총합 (없으면 None).
+
+    값의 정의는 `CampaignDataset.media_spend()` 한 곳에만 둔다 — 화면과
+    보고서가 서로 다른 방식으로 합계를 만들어 숫자가 갈라졌던 게 이 버그의
+    출발점이었다.
+    """
+    if dataset is None:
+        return None
+    getter = getattr(dataset, 'media_spend', None)
+    return getter() if callable(getter) else None
+
+
 def totals_row(df: pd.DataFrame, dataset=None) -> None:
-    """차트 위 요약 수치 — 근거 수치 병기 원칙 (claude.md 5)"""
+    """
+    차트 위 요약 수치 — 근거 수치·출처 병기 (claude.md 3.2 · 5)
+
+    2026.09.08 개편 — '계획 예산 vs 실집행비' 대조를 걷어냈다.
+      · 계획 예산은 **제안 시점** 미디어믹스에서 온 값이라 부킹 뒤 값과 다르다.
+        집행 결과 보고서에 그 대비 증감을 실으면 사실과 어긋난다.
+      · 실집행비는 매체별 행을 더해 만들었는데, 병합셀로 매체명이 빈 행이
+        누락돼 실측 캠페인에서 총합이 62,555,145원 모자랐다.
+    이제 매체비 총합은 데일리리포트 `Media Mix` 시트의 총계 행에서 직접 읽고,
+    포스트바이 `Campaign Summary` 총계와 대조해 표시한다.
+    """
     if df.empty:
         return
-    plan_b = float(df['계획예산'].sum())
-    act_b = float(df['실집행비'].sum())
-    plan_i = float(df['계획노출'].sum())
     act_i = float(df['실집행노출'].sum())
 
-    def gap(a: float, p: float) -> Optional[str]:
-        """
-        계획 대비 증감(%). `st.metric` 의 delta 는 **증감**을 뜻하므로
-        달성률(80%)을 그대로 넣으면 '+80% 상승'으로 렌더된다. 예산 20% 미집행이
-        초록 상승 화살표로 보이는 셈이라, 광고주 보고 전 단계에서 정반대로
-        읽힐 수 있다. 그래서 달성률이 아니라 (실집행/계획 - 1) 을 넣는다.
-        """
-        if not p:
-            return None
-        return f'{(a / p - 1) * 100:+.1f}%'
-
-    def tile(col, label: str, v: float, unit: str,
-             plan: Optional[float] = None) -> None:
-        """줄인 값은 화면에, 정확한 값과 달성률은 툴팁에."""
-        tip = f'정확한 값 · {v:,.0f}{unit}' if v else None
-        if plan:
-            tip = f'{tip} · 계획 {plan:,.0f}{unit} 대비 달성률 {v / plan:.1%}'
-        col.metric(label, korean_amount(v) if v else '—',
-                   delta=gap(v, plan) if plan else None, help=tip)
-
-    # 4개를 한 줄에 늘어놓으면 타일 폭이 105px 남짓이라 라벨과 금액이 함께
-    # 잘린다. 2×2 로 접어 타일당 폭을 두 배로 준다.
-    # 캠페인 총계가 있으면 그것을 쓴다. 매체별 부분합을 계획과 비교하면
-    # 집행률이 실제보다 낮게 나온다 (campaign_actuals 주석 참조).
     camp = campaign_actuals(dataset) if dataset is not None else {}
-    camp_b, camp_i = camp.get('spend'), camp.get('impressions')
-    show_b = camp_b if camp_b else act_b
-    show_i = camp_i if camp_i else act_i
+    show_i = camp.get('impressions') or act_i
+    spend = media_spend_of(dataset)
 
     a1, a2 = st.columns(2)
     a1.metric('차트 표시 매체', f'{len(df)}개',
               help='값이 있어 차트에 그린 매체 수예요. '
                    '보고서에는 전체 매체가 들어가요.')
-    tile(a2, '계획 예산', plan_b, '원')
-    b1, b2 = st.columns(2)
-    tile(b1, '실집행비', show_b, '원', plan_b)
-    tile(b2, '실집행 노출', show_i, '회', plan_i)
-    st.caption('증감은 **계획 대비**예요. 예) −20.0% = 계획의 80% 집행'
-               ' (달성률은 타일에 마우스를 올리면 보여요)')
 
-    # 총계와 매체별 합이 어긋나면 한쪽을 고르지 않고 둘 다 알린다
-    # (claude.md 3.2 — 문서 간 값이 다를 때 임의 선택 금지).
-    if camp_b and act_b and abs(camp_b - act_b) > max(camp_b * 0.005, 1):
-        T.note(
-            f'캠페인 총계 {camp_b:,.0f}원과 매체별 합계 {act_b:,.0f}원이 '
-            f'{abs(camp_b - act_b):,.0f}원 차이가 나요. '
-            '매체 단위로 쪼개지지 않은 집행분이 있어서예요 — '
-            '위 타일은 캠페인 총계 기준이고, 아래 차트는 매체별 기준이에요.',
-            'warn')
+    if spend is not None and spend.total:
+        tip = f'정확한 값 · {spend.total:,.0f}원'
+        if spend.source_label:
+            tip += f' · 출처 {spend.source_label}'
+        if spend.verified_value:
+            tip += f' · 포스트바이 총계 {spend.verified_value:,.0f}원'
+        a2.metric('매체비 총합', korean_amount(spend.total), help=tip)
+    else:
+        a2.metric('매체비 총합', '—',
+                  help='데일리리포트의 Media Mix 시트나 포스트바이 총계에서 '
+                       '매체비를 찾지 못했어요.')
+
+    b1, _ = st.columns(2)
+    b1.metric('실집행 노출', korean_amount(show_i) if show_i else '—',
+              help=f'정확한 값 · {show_i:,.0f}회' if show_i else None)
+
+    _spend_provenance(spend)
+
+
+def _spend_provenance(spend) -> None:
+    """매체비 총합이 어디서 왔고 검증됐는지 한 줄로."""
+    if spend is None or not spend.total:
+        return
+    if spend.confidence == 'low' and spend.note:
+        # 두 문서가 다르면 한쪽을 고르지 않고 둘 다 알린다 (claude.md 3.2)
+        T.note(f'매체비 총합이 문서마다 달라요 — {spend.note}', 'warn')
+        return
+    src = spend.source_label or '집행 결과 문서'
+    if spend.is_verified():
+        st.caption(f'매체비 총합은 {src} 기준이며, 포스트바이 총계와 일치해요.')
+    else:
+        st.caption(f'매체비 총합은 {src} 기준이에요.')
 
 
 def panel(dataset, selected: Sequence[str], *, metric: str = '노출',
@@ -296,13 +327,13 @@ def panel(dataset, selected: Sequence[str], *, metric: str = '노출',
     if show_pie and show_bar:
         left, right = st.columns([1, 1.25], gap='large')
         with left:
-            st.markdown('##### 매체별 예산 비중')
+            st.markdown('##### 매체별 집행 비중')
             budget_pie(df)
         with right:
             st.markdown(f'##### 계획 vs 실집행 · {metric}')
             plan_vs_actual_bar(df, metric)
     elif show_pie:
-        st.markdown('##### 매체별 예산 비중')
+        st.markdown('##### 매체별 집행 비중')
         budget_pie(df)
     elif show_bar:
         st.markdown(f'##### 계획 vs 실집행 · {metric}')

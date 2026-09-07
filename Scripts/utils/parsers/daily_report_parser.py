@@ -16,10 +16,11 @@ from typing import Dict, List, Optional, Tuple
 import pandas as pd
 
 from models.campaign_data import (
-    DailyReportResult, DailyRow, MediaPerformance, MetricSet,
+    DailyReportResult, DailyRow, MediaPerformance, MediaSpend, MetricSet,
     Provenance, ScheduleEvent,
 )
 from . import sheet_utils as su
+from . import media_spend as msx
 from .integrated_blocks import read_media_blocks
 from .section_tables import read_section_tables
 
@@ -61,9 +62,40 @@ class DailyReportParser:
             DailyReportParser._parse_overview(xl, path, xl.sheet_names, result)
             DailyReportParser._parse_integrated(xl, path, xl.sheet_names, result)
             DailyReportParser._parse_media_sheets(xl, path, xl.sheet_names, result)
+            DailyReportParser._parse_media_spend(xl, path, xl.sheet_names, result)
         finally:
             xl.close()          # 업로드본 삭제를 막지 않도록 핸들을 닫는다
         return result
+
+    # ---------------- Media Mix 시트 (매체비 총합) ----------------
+
+    @staticmethod
+    def _parse_media_spend(xl, path: Path, sheet_names: List[str],
+                           result: DailyReportResult) -> None:
+        """
+        데일리리포트 안의 `Media Mix` 시트에서 매체비 총합을 읽는다.
+
+        이 시트는 집행 중 갱신되는 실제 부킹 기준이라, 제안 시점의 별도
+        미디어믹스 파일과 값이 다르다. 보고서에 싣는 매체비는 이쪽이다.
+        읽지 못해도 파이프라인은 계속한다 (claude.md 3.3).
+        """
+        try:
+            raw = msx.extract(xl, sheet_names, file_name=path.name)
+        except Exception as e:
+            result.warnings.append(f'Media Mix 시트에서 매체비를 읽지 못함: {e}')
+            return
+        if raw.get('total') is None:
+            if raw.get('note'):
+                result.warnings.append(f'매체비 총합 미확보 — {raw["note"]}')
+            return
+        result.media_spend = MediaSpend(
+            total=raw['total'],
+            by_media=raw.get('by_media') or {},
+            basis=raw.get('basis', ''),
+            source_label=raw.get('source_label', ''),
+            confidence=raw.get('confidence', 'medium'),
+            note=raw.get('note', ''),
+        )
 
     # ---------------- Summary 시트 (캠페인/기간/예산) ----------------
 

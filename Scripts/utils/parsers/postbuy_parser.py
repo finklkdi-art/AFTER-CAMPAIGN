@@ -179,6 +179,21 @@ class PostbuyParser:
             for ri, row in enumerate(table[1:], 1):
                 media = row[0] if row else ''
                 if not media or su.is_total_row(media):
+                    # 🔴 Total 행을 그냥 버리지 않는다.
+                    #
+                    # 예전에는 여기서 건너뛰기만 해서, 보고서에서 가장 많이
+                    # 인용되는 '매체비 총합'을 매체별 행을 더해 만들어야 했다.
+                    # 병합셀로 매체명이 빈 행(카카오모먼트_크레딧 등)이 빠지면서
+                    # 실측 캠페인에서 395,170,000 이어야 할 값이 414,170,000
+                    # 으로 나왔다. 총계 행은 문서가 직접 말해 주는 값이므로
+                    # 검증 기준으로 따로 보관한다 (claude.md 3.2 교차 인용).
+                    if su.is_total_row(media):
+                        budget = su.to_number(
+                            PostbuyParser._at(row, cols.get('budget')))
+                        if budget is not None and result.summary_total_budget is None:
+                            result.summary_total_budget = budget
+                            result.summary_total_source = (
+                                f'{file_name}:p{section.slide_no}')
                     continue
                 result.campaign_summary.append(MediaPerformance(
                     media=media,

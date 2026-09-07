@@ -34,6 +34,10 @@ SAMPLES = ROOT / 'Input' / 'Samples'
 # 이 숫자들이 리포트 내용을 좌우한다. 줄어들면 회귀다.
 METRICS = ('plan_lines', 'daily_rows', 'media_performance', 'kpi_targets')
 
+# 매체비 총합은 보고서에서 가장 많이 인용되는 값이라 따로 고정한다.
+# 값이 바뀌면(특히 사라지면) 즉시 회귀로 잡아야 한다.
+SPEND_KEYS = ('media_spend', 'media_spend_verified')
+
 
 def measure(folder: Path) -> dict:
     from utils.capture import capture_output
@@ -53,7 +57,11 @@ def measure(folder: Path) -> dict:
     failed = [d for d in docs if getattr(d, 'status', '') == 'error']
     drm = sum(1 for d in failed
               if '문서보안' in (getattr(d, 'error_msg', '') or ''))
+    spend = dataset.media_spend()
     return {
+        'media_spend': round(spend.total) if spend else None,
+        'media_spend_verified': bool(spend and spend.is_verified()) if spend else False,
+        'media_spend_source': (spend.source_label if spend else ''),
         'docs': len(docs),
         'failed': len(failed),
         'drm_locked': drm,
@@ -127,6 +135,15 @@ def main() -> int:
             if got[m] < want[m]:
                 problems.append(
                     f'{name} — {m} 감소: {want[m]} → {got[m]}')
+        # 매체비 총합 — 사라지거나 값이 달라지면 회귀
+        if want.get('media_spend') is not None:
+            if got.get('media_spend') is None:
+                problems.append(f'{name} — 매체비 총합을 못 읽게 됨 '
+                                f'({want["media_spend"]:,} → None)')
+            elif got['media_spend'] != want['media_spend']:
+                problems.append(
+                    f'{name} — 매체비 총합 변경: {want["media_spend"]:,} '
+                    f'→ {got["media_spend"]:,}')
         if got['mode'] != want['mode']:
             problems.append(
                 f'{name} — 구성 모드 변경: {want["mode"]} → {got["mode"]}')
@@ -139,9 +156,11 @@ def main() -> int:
             print(f'  ERROR  {name[:40]:42} {m["error"][:40]}')
             continue
         flag = 'DRM' if m['drm_locked'] else '   '
-        print(f'  {flag}    {name[:40]:42} '
+        spend = (f'{m["media_spend"]:,}' if m.get('media_spend') else '—')
+        mark = '✓' if m.get('media_spend_verified') else ' '
+        print(f'  {flag}    {name[:34]:36} '
               + ' '.join(f'{k[:5]}={m[k]:<5}' for k in METRICS)
-              + f' {m["mode"]:>5} {m["seconds"]:>5}s')
+              + f' | 매체비 {spend:>15}{mark} {m["mode"]:>5}')
 
     for s in skipped:
         print(f'\nSKIP  {s}')

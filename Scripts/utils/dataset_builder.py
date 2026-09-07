@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from models.campaign_data import (
-    CampaignDataset, DataGap, GAP_PENDING,
+    CampaignDataset, DataGap, GAP_PENDING, MediaSpend,
 )
 from models.campaign_knowledge import CampaignKnowledge
 from models.checklist import ChecklistItem
@@ -65,6 +65,7 @@ class CampaignDatasetBuilder:
 
         dataset.mode = 'full' if dataset.postbuy and dataset.postbuy.kpi_targets else 'lite'
 
+        CampaignDatasetBuilder._verify_media_spend(dataset)
         CampaignDatasetBuilder._collect_gaps(dataset)
         CampaignDatasetBuilder._report_to_checklist(knowledge, dataset)
         return dataset
@@ -72,6 +73,47 @@ class CampaignDatasetBuilder:
     # ------------------------------------------------------------------
     # 파서 실행
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _verify_media_spend(dataset: CampaignDataset) -> None:
+        """
+        매체비 총합을 포스트바이 Total 행과 대조한다.
+
+        서로 다른 두 문서(데일리리포트 Media Mix 시트 · 포스트바이 Campaign
+        Summary)가 같은 값을 말하면 확신을 갖고 쓴다. 어긋나면 임의로 하나를
+        고르지 않고 두 값을 모두 남겨 사람이 판단하게 한다 (claude.md 3.2).
+        """
+        spend = getattr(dataset.daily_report, 'media_spend', None) \
+            if dataset.daily_report else None
+        pb = dataset.postbuy
+        pb_total = getattr(pb, 'summary_total_budget', None) if pb else None
+
+        if spend is None:
+            # 데일리리포트에 Media Mix 시트가 없어도, 포스트바이 총계가 있으면
+            # 그것만으로 매체비를 세운다 — 둘 다 집행 이후 문서다.
+            if pb_total is not None and dataset.daily_report is not None:
+                dataset.daily_report.media_spend = MediaSpend(
+                    total=pb_total, basis='postbuy_summary_total',
+                    source_label=getattr(pb, 'summary_total_source', '') or '',
+                    confidence='medium',
+                    note='데일리리포트에 Media Mix 시트가 없어 포스트바이 총계를 사용')
+            return
+
+        if pb_total is None:
+            return
+
+        spend.verified_value = pb_total
+        spend.verified_source = getattr(pb, 'summary_total_source', '') or ''
+        if spend.is_verified():
+            spend.confidence = 'high'
+            spend.note = ''
+        else:
+            gap = spend.mismatch() or 0.0
+            spend.confidence = 'low'
+            spend.note = (f'데일리리포트 {spend.total:,.0f}원과 '
+                          f'포스트바이 {pb_total:,.0f}원이 '
+                          f'{abs(gap):,.0f}원 달라요')
+            dataset.warnings.append('매체비 총합 — ' + spend.note)
 
     @staticmethod
     def _extract_intent(knowledge: CampaignKnowledge,

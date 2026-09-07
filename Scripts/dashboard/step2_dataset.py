@@ -156,8 +156,9 @@ def render_kpi(dataset: CampaignDataset) -> None:
              '실적': d.views if d else None},
             {'지표': '클릭', '제안 기준(참고)': t['clicks'],
              '실적': d.clicks if d else None},
-            {'지표': '예산', '제안 기준(참고)': t['budget'],
-             '실적': d.spend if d else None},
+            # '예산' 행은 뺐다 — 제안 시점 매체비와 실집행 매체비를 나란히
+            # 놓는 비교는 실무에서 쓰이지 않고, 부킹 뒤 값이 달라져 오히려
+            # 잘못된 증감으로 읽힌다 (2026.09.08).
         ]), width="stretch", hide_index=True)
         st.caption("'제안 기준'은 확정 목표가 아니라서 달성률을 자동으로 계산하지 않아요.")
 
