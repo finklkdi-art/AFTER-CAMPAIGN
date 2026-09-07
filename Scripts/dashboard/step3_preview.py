@@ -173,8 +173,7 @@ def _detail(sl, spec, registry, i: int) -> None:
         st.markdown(
             '<p class="ax-lead sm">'
             '<span class="kbr">미리보기는 실제 PPT 와</span> '
-            '<span class="kbr">글자 크기·줄바꿈이 다를 수 있어요.</span> '
-            '<span class="kbr">최종 확인은 내려받은 파일로 해 주세요.</span></p>',
+            '<span class="kbr">글자 크기·줄바꿈이 다를 수 있어요.</span></p>',
             unsafe_allow_html=True)
     with right:
         if bd and bd.editable:
@@ -335,7 +334,7 @@ def render_drawer(block_id: Optional[str] = None) -> None:
 
     st.markdown(f'<div class="af-drawer-title">{bd.label}</div>',
                 unsafe_allow_html=True)
-    st.caption('이 슬라이드의 문안만 고쳐요. 수치와 표는 바뀌지 않아요.')
+    st.caption('문안만 고쳐요 — 수치와 표는 그대로예요.')
 
     project_root = state.get(state.KEY_PROJECT_ROOT)
     ok, reason = R.api_available(project_root)
@@ -392,7 +391,7 @@ def render_drawer(block_id: Optional[str] = None) -> None:
         send_label = '전송하고 수정'
     else:
         T.note(f'Claude API 미사용 — {reason} · '
-               '규칙 기반 프리셋으로 동작해요 (외부 전송 없음).', 'warn')
+               '규칙 기반 프리셋으로 동작해요 (외부 전송 없음).', 'info')
         send_label = '수정하기'
 
     if st.button(send_label, key=f'send_{block_id}', type='primary',
@@ -403,9 +402,9 @@ def render_drawer(block_id: Optional[str] = None) -> None:
             _revise_and_rerender(bd, slide, text, use_api=ok)
             st.rerun()
 
-    if not ok:
-        st.caption('키가 없어서 외부로 나가는 데이터가 없어요.')
-    else:
+    # 키가 없을 때의 '외부 전송 없음'은 바로 위 안내가 이미 말했다. 같은 말을
+    # 버튼 아래에서 한 번 더 하지 않는다.
+    if ok:
         if st.button('전송 없이 프리셋으로', key=f'local_{block_id}',
                      width='stretch'):
             if text:
@@ -469,9 +468,8 @@ def render(project_root: Path) -> None:
     category = (knowledge.category or '').strip()
     missing = missing_fonts()
     if missing:
-        T.note('폰트가 설치되지 않아 PPT가 다른 글꼴로 보일 수 있어요: '
-               + ', '.join(missing) + ' · `Fonts/` 폴더에서 설치해 주세요.',
-               'warn')
+        T.note('PPT 글꼴이 달라 보일 수 있어요 — ' + ', '.join(missing)
+               + ' 미설치', 'info')
 
     # ── 덱 구성 (미리보기용) — PPTX 렌더는 최종 추출 때만 한다
     spec = state.get(KEY_SPEC)
@@ -490,8 +488,7 @@ def render(project_root: Path) -> None:
     # 제목은 덱을 만든 뒤에 쓴다 — 장수를 알아야 문장이 성립한다.
     shell.page_title(
         '리포트를 확인해 주세요',
-        f'슬라이드 {len(spec.slides)}장을 만들었어요. '
-        '고치고 싶은 장을 고르면 문안을 다듬을 수 있어요.')
+        f'슬라이드 {len(spec.slides)}장을 만들었어요. 고칠 장을 골라 주세요.')
 
     registry = {bd.block_id: bd for bd in ReportSpecBuilder.registry()}
 
@@ -515,9 +512,8 @@ def render(project_root: Path) -> None:
 
     # 파일명 규칙을 못 채워도 막지 않는다. 임시값으로 만들되 사실을 알린다.
     if not (date and category):
-        T.note('작성 일자 또는 품목이 비어 있어 파일명 규칙'
-               '(YYMMDD_품목_자료명_v0_Cheil)에 완전히 맞지는 않아요. '
-               '생성은 그대로 진행하고 Checklist 에 남겨요.', 'warn')
+        T.note('작성 일자 또는 품목이 비어 있어 파일명이 규칙과 조금 달라요.',
+               'warn')
     date = date or datetime.now().strftime('%y%m%d')
     category = category or '미지정'
 

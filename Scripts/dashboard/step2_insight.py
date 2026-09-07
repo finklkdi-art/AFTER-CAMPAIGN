@@ -127,7 +127,7 @@ def _card(ins, idx: int) -> None:
         head += f'　|　{conf_label}'
     st.markdown(f'###### {idx}. {head}')
     if conf == 'low':
-        st.caption('격차가 기준을 겨우 넘은 건이에요. 문구를 보시고 약하면 빼 주세요.')
+        st.caption('격차가 기준을 겨우 넘은 건이에요.')
 
     left, right = st.columns([1.35, 1], gap='medium')
 
@@ -173,8 +173,7 @@ def render(knowledge: CampaignKnowledge, dataset) -> bool:
     st.markdown(
         '<p class="ax-lead">'
         '<span class="kbr">실집행 데이터에서 자동으로 뽑은 초안이에요.</span> '
-        '<span class="kbr">문구를 고치거나 뺀 뒤 승인하시면</span> '
-        '<span class="kbr">그대로 보고서에 실려요.</span></p>',
+        '<span class="kbr">고치거나 뺀 뒤 승인해 주세요.</span></p>',
         unsafe_allow_html=True)
 
     if dataset is None:
@@ -185,8 +184,8 @@ def render(knowledge: CampaignKnowledge, dataset) -> bool:
     approved = bool(state.get(state.KEY_INSIGHT_APPROVED))
 
     if not insight_set.insights:
-        T.note('규칙 발동 조건을 충족하는 데이터가 없어 초안을 만들지 못했어요. '
-               '이 경우 Lesson Learned 는 포스트바이 원문으로 대체돼요.', 'warn')
+        T.note('초안을 만들 만한 데이터가 없어 포스트바이 원문을 그대로 써요.',
+               'warn')
         for reason in insight_set.excluded[:8]:
             st.caption(f'· {reason}')
         # 도출이 0건이면 막지 않는다 (폴백 경로가 있으므로)
@@ -208,7 +207,7 @@ def render(knowledge: CampaignKnowledge, dataset) -> bool:
 
     if insight_set.excluded:
         st.markdown('###### 도출에서 빠진 항목')
-        st.caption('아래 사유는 보고서 1페이지 Checklist 에 그대로 실려요.')
+        st.caption('Checklist 에 그대로 실려요.')
         for reason in insight_set.excluded[:10]:
             st.caption(f'· {reason}')
         T.spacer(6)

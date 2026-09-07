@@ -272,7 +272,7 @@ def render_landing() -> None:
     # 넣어 중앙 정렬과 여백 리듬이 틀어진다.
     st.markdown(T.HERO_HTML, unsafe_allow_html=True)
 
-    spacer(18)
+    spacer(14)
 
     # 버튼도 히어로와 같은 축에 정렬한다. 가운데 칼럼을 좁게 잡아야
     # 버튼 폭이 본문 폭과 어긋나지 않는다.
@@ -284,31 +284,37 @@ def render_landing() -> None:
             state.init_state()
             st.rerun()
 
+    # 각주다. 읽히되 주인공 자리를 뺏지 않도록 '*' 를 달아 작고 얇게 둔다.
     st.markdown(
-        '<p class="after-notice">올려주신 자료는 작업이 끝나면 '
-        '서버에서 바로 지워져요.</p>', unsafe_allow_html=True)
+        '<p class="after-notice">'
+        '<span class="kbr">*올려주신 자료는 작업이 끝나면</span> '
+        '<span class="kbr">서버에서 바로 지워져요.</span></p>',
+        unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════ 작업 화면
 
-def _go_landing() -> None:
-    """대문으로 돌아간다 (이탈 방지 다이얼로그를 통과한 뒤에만 호출)."""
+def _leave(root: Path) -> None:
+    """
+    대문으로 돌아간다 (이탈 방지 다이얼로그를 통과한 뒤에만 호출).
+
+    나가는 순간 샌드박스를 통째로 파기한다. 별도 [종료] 버튼을 없앤 뒤로
+    이 동선이 '즉시 전량 삭제'를 맡는다 (claude.md 1.2). 다이얼로그가 이미
+    자료가 사라진다고 알리고 확인을 받았으므로 여기서 다시 묻지 않는다.
+    """
+    destroy_session(root)
     st.session_state[KEY_ENTERED] = False
     st.rerun()
 
 
-def render_workspace(root: Path, ttl_minutes: int) -> None:
+def render_workspace(root: Path) -> None:
     T.inject()
 
     knowledge = state.get_knowledge()
-    born = st.session_state.get(KEY_BORN, time.time())
-    left = max(0, int(ttl_minutes * 60 - (time.time() - born)) // 60)
 
     shell.topbar(
-        _go_landing,
+        lambda: _leave(root),
         campaign=(knowledge.campaign_name if knowledge else ''),
-        session_note=f'{left}분 후 자동 파기',
-        on_destroy=lambda: (destroy_session(root), st.rerun()),
     )
     shell.steps(STEPS, state.get_step())
 
@@ -365,7 +371,7 @@ def main() -> None:
         render_landing()
         return
 
-    render_workspace(root, ttl)
+    render_workspace(root)
 
 
 if __name__ == '__main__':

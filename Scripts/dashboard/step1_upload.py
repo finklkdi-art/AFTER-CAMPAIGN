@@ -38,7 +38,7 @@ from dashboard import state, theme_css as T
 
 UPLOAD_HINT = (
     'PDF보다 원본 파일(PPTX · XLSX)을 올리시면 인식이 더 정확해요. '
-    '용량이 크면 읽는 데 몇 초 걸릴 수 있어요.'
+    '용량이 크면 읽는 데 시간이 꽤 걸릴 수 있어요.'
 )
 
 ACCEPTED = ['pdf', 'xlsx', 'xls', 'pptx', 'docx',
@@ -174,16 +174,18 @@ def _render_upload(project_root: Path) -> None:
     # 절 단위로 묶어 문장 중간에서 줄이 바뀌지 않게 한다 (claude.md 5)
     st.markdown(
         '<p class="ax-lead">'
-        '<span class="kbr">제안서 · 미디어믹스 · 데일리리포트 ·</span> '
-        '<span class="kbr">포스트바이 · 소재 파일을 한 번에 올려 주세요.</span> '
-        '<span class="kbr">폴더 구조는 신경 쓰지 않으셔도 돼요.</span></p>',
+        '<span class="kbr">제안서, 미디어믹스, 데일리리포트, 포스트바이,</span> '
+        '<span class="kbr">게재보고 등 캠페인 관련 파일을</span> '
+        '<span class="kbr">한번에 올려주세요.</span></p>',
         unsafe_allow_html=True)
     T.spacer(6)
 
+    # 라벨은 지우지 않고 숨긴다 — 회색 점선 영역이 이미 '떨어뜨리는 자리'라고
+    # 말하고 있어 화면에는 군더더기지만, 스크린리더에는 남아야 한다.
     files = st.file_uploader(
         '파일을 끌어다 놓거나 눌러서 선택해 주세요',
         type=ACCEPTED, accept_multiple_files=True, key='ax_uploader',
-        label_visibility='visible')
+        label_visibility='collapsed')
 
     T.note(UPLOAD_HINT, 'ok')
 

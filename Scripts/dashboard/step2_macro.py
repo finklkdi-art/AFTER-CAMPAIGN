@@ -118,8 +118,7 @@ def _summary_charts(dataset) -> None:
         st.caption('매체를 찾지 못했어요.')
         return
     st.markdown('##### 집행 요약')
-    st.caption(f'매체 {len(names)}개 전부가 보고서에 들어가요. '
-               '아래 차트에는 값이 있는 매체만 그려져요.')
+    st.caption(f'매체 {len(names)}개 전부가 보고서에 들어가요.')
     charts.panel(dataset, names, metric='노출')
 
 
@@ -127,8 +126,7 @@ def _summary_charts(dataset) -> None:
 
 def _render_meta(knowledge: CampaignKnowledge, dataset) -> None:
     st.markdown('### 이 캠페인의 기본 정보만 확인해 주세요')
-    st.caption('보고서 표지와 파일명에 그대로 쓰여요. '
-               '나머지 값은 아래에서 자동으로 정리해 드려요.')
+    st.caption('보고서 표지와 파일명에 그대로 쓰여요.')
 
     if K_NAME not in st.session_state:
         st.session_state[K_NAME] = knowledge.campaign_name or ''
@@ -166,7 +164,7 @@ def _render_meta(knowledge: CampaignKnowledge, dataset) -> None:
             hints.append(f'포스트바이: {dataset.postbuy.campaign}')
 
     st.markdown('###### 광고주 · 기간 · 소재 · 전략')
-    st.caption('문서에서 자동으로 정리한 값이에요. 그대로 두셔도 돼요.')
+    st.caption('문서에서 자동으로 정리한 값이에요.')
     if True:
         st.text_input('광고주', key=K_ADV, placeholder='예) 삼성전자',
                       on_change=_touch, args=('overview',))
@@ -176,9 +174,8 @@ def _render_meta(knowledge: CampaignKnowledge, dataset) -> None:
         # 보고용 명칭을 따로 쓰는 경우도 많으므로 막지 않고 알리기만 한다.
         typed = (st.session_state.get(K_NAME) or '').strip()
         if typed and hints and not any(typed in h for h in hints):
-            T.note(f'입력하신 캠페인명 "{typed}" 이 문서 표기와 달라요. '
-                   '의도한 이름이면 그대로 두셔도 돼요 — 표지와 파일명에 '
-                   '이 이름이 쓰여요.', 'warn')
+            T.note(f'입력하신 캠페인명 "{typed}" 이 문서 표기와 달라요.',
+                   'warn')
 
         st.markdown('##### 집행 기간')
         periods = _periods(knowledge, dataset)
@@ -190,26 +187,26 @@ def _render_meta(knowledge: CampaignKnowledge, dataset) -> None:
         missing = [k for k, v in periods.items() if not v]
         if missing:
             T.note(f'{" · ".join(missing)}을 못 읽었어요 — '
-                   '아래 [수치 · KPI · 결손 항목]의 결손 탭에서 직접 넣으시면 '
-                   '제안 대비 실집행 대조가 완성돼요.', 'warn')
+                   '아래 [수치 · KPI · 결손 항목]에서 넣으실 수 있어요.', 'warn')
         if len(set(vals)) > 1:
-            T.note('원천별 기간 표기가 서로 달라요 — 양쪽 모두 보고서에 함께 싣고 '
-                   'Checklist 에도 남겨요.', 'warn')
+            T.note('원천별 기간 표기가 서로 달라요 — 양쪽 모두 보고서에 실어요.',
+                   'warn')
         elif not missing:
             _touch('period')
 
         st.markdown('##### 소재 리스트')
         creatives = _creative_names(dataset)
         if creatives:
-            st.caption(f'{len(creatives)}종 확인 — 전부 보고서에 반영돼요')
+            st.caption(f'{len(creatives)}종')
             T.table(['#', '소재 표기'],
                     [[i, n] for i, n in enumerate(creatives[:20], 1)])
             if len(creatives) > 20:
                 st.caption(f'외 {len(creatives) - 20}종')
             _touch('creative')
         else:
-            st.caption('소재 표기를 찾지 못했어요. 소재 축 슬라이드는 만들지 않고 '
-                       'Checklist 에 남겨요.')
+            # 슬라이드를 못 만든 사실은 Checklist 로 전달된다. 화면에서는
+            # '못 찾았다'까지만 말하고 그 뒷일은 설명하지 않는다.
+            st.caption('소재 표기를 찾지 못했어요.')
 
         st.markdown('##### 전략 · 목적')
         purposes = _purposes(dataset)
@@ -217,7 +214,7 @@ def _render_meta(knowledge: CampaignKnowledge, dataset) -> None:
             T.table(['목적 표기'], [[p] for p in purposes])
             _touch('strategy')
         else:
-            st.caption('목적 컬럼이 없어서 목적 축 슬라이드는 만들지 않아요.')
+            st.caption('목적 표기를 찾지 못했어요.')
 
 
 # ═══════════════════════════ 반영
@@ -341,12 +338,14 @@ def render(project_root: Path) -> None:
         if n_warn:
             head.append(f'권고 {n_warn}건')
         head.append(f'참고 {len(items) - n_err - n_warn}건')
-        st.caption(' · '.join(head) + ' — 보고서 1페이지 Checklist 에 그대로 실려요.')
+        st.caption(' · '.join(head) + ' — 보고서 1페이지 Checklist 에 실려요.')
 
         # 영문 severity 는 실무자에게 바로 읽히지 않는다.
         korean = {'error': '꼭 확인', 'warning': '권고', 'info': '참고'}
         for it in ordered[:40]:
-            lvl = {'error': 'err', 'warning': 'warn'}.get(it.severity, 'ok')
+            # 참고(info)는 라임이 아니라 조용한 면으로 — 라임은 '잘 됐다'는
+            # 뜻이라 단순 참고 항목에 쓰면 신호가 뒤집힌다.
+            lvl = {'error': 'err', 'warning': 'warn'}.get(it.severity, 'info')
             tag = korean.get(it.severity, it.severity)
             T.note(f'[{tag}] {it.message}', lvl)
             # 왜 그런지가 있어야 손을 댈 수 있다. message 만으로는 부족하다.
@@ -358,8 +357,7 @@ def render(project_root: Path) -> None:
 
     # ── 상세 검증 — 제거하지 않고 보존 (Rule Book 2.3 안전장치 1)
     st.markdown('#### 수치 · KPI · 결손 항목')
-    st.caption('위 확인만으로 충분하시면 그냥 지나치셔도 돼요. '
-               '여기서 고치신 값은 바로 반영돼요.')
+    st.caption('여기서 고치신 값은 바로 반영돼요.')
     if True:
         try:
             from dashboard import step2_dataset

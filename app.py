@@ -48,7 +48,6 @@ def render_shell() -> None:
     shell.topbar(
         _reset_all,
         campaign=(knowledge.campaign_name if knowledge else ''),
-        session_note='로컬 전용',
     )
     shell.steps(STEPS, state.get_step())
 

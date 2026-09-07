@@ -164,17 +164,15 @@ def render(knowledge: CampaignKnowledge, project_root=None) -> None:
     st.markdown('### 캠페인 개요(기획 의도)를 확인해 주세요')
     st.markdown(
         '<p class="ax-lead">'
-        '<span class="kbr">보고서 Part 1에 그대로 실리는 내용이에요.</span> '
-        '<span class="kbr">제안서·미디어브리프에서 찾아 둔 초안이니</span> '
-        '<span class="kbr">확인하고 고쳐 주세요.</span></p>',
+        '<span class="kbr">제안서·미디어브리프에서 찾아 둔 초안이에요.</span> '
+        '<span class="kbr">보고서 Part 1에 그대로 실려요.</span></p>',
         unsafe_allow_html=True)
 
     src = ', '.join(ov.get('sources') or []) or '찾은 문서 없음'
     st.caption(f'{_CONF.get(conf, conf)} · 출처: {src}')
 
     if conf == 'none':
-        T.note('기획 의도를 담은 문서를 찾지 못했어요. 비워 두셔도 보고서에는 '
-               '슬라이드가 남고 작성 가이드가 들어가요.', 'warn')
+        T.note('기획 의도를 담은 문서를 찾지 못했어요. 비워 두셔도 돼요.', 'warn')
 
     st.markdown('###### 캠페인 목표')
     for key, label, hint in _FIELDS:

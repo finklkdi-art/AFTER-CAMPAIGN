@@ -52,6 +52,11 @@ LIME = '#C6F24E'           # 긍정·하이라이트 (항상 잉크 텍스트)
 VIOLET = '#8B7CF6'         # 보조 계열 (매체 구분)
 AMBER = '#FFB84D'          # 보조 계열 · 주의
 
+# 드롭존 — '여기에 떨어뜨리는 자리'로 읽히도록 페이퍼보다 한 톤 어두운 웜 그레이.
+# 보더는 얇은 회색 점선이라 잉크 보더를 쓰는 '조작 가능한 면'과 구분된다.
+DROP_BG = '#E3DDCE'
+DROP_BD = '#A7A192'
+
 # 그레이 램프 — 잉크 기반 웜 뉴트럴 (charts.py 가 이 이름들을 참조한다)
 GREY_900 = INK
 GREY_800 = '#2E2A24'
@@ -124,6 +129,7 @@ def _tokens() -> str:
     --ax-brand:{BRAND}; --ax-brand-hover:{BRAND_HOVER}; --ax-brand-press:{BRAND_PRESS};
     --ax-brand-weak:{BRAND_WEAK}; --ax-brand-100:{BRAND_100}; --ax-brand-light:{BRAND_LIGHT};
     --ax-coral:{CORAL}; --ax-lime:{LIME}; --ax-violet:{VIOLET}; --ax-amber:{AMBER};
+    --ax-drop:{DROP_BG}; --ax-drop-bd:{DROP_BD};
     --ax-fg:{INK}; --ax-fg-2:{GREY_700}; --ax-fg-3:{GREY_600}; --ax-fg-disabled:{GREY_400};
     --ax-line:{INK}; --ax-line-10:rgba(23,20,15,.10); --ax-line-30:rgba(23,20,15,.30);
     --ax-ok:{OK}; --ax-warn:{WARN}; --ax-warn-fill:{WARN_FILL}; --ax-bad:{BAD};
@@ -192,7 +198,10 @@ _BASE_CSS = """
   .rc-steps .st { display: flex; align-items: center; gap: 9px; flex: 0 0 auto; opacity: .4; }
   .rc-steps .bul { width: 28px; height: 28px; border-radius: var(--ax-r-full); display: inline-flex; align-items: center; justify-content: center;
       font-family: var(--ax-disp); font-size: .82rem; font-weight: 800; flex: 0 0 auto; background: var(--ax-paper-2); color: var(--ax-fg); border: var(--ax-bd); }
-  .rc-steps .lb { font-family: var(--ax-head); font-size: .98rem; color: var(--ax-fg); white-space: nowrap; }
+  /* 라벨은 헤드(Black Han Sans)가 아니라 본문 서체 미디움으로 — 헤드는 획이
+     너무 굵어 3단계가 나란히 서면 화면에서 가장 시끄러운 요소가 된다. */
+  .rc-steps .lb { font-family: var(--ax-body); font-size: 1.13rem; font-weight: 500;
+      color: var(--ax-fg); white-space: nowrap; letter-spacing: -.01em; }
   .rc-steps .bar { flex: 1 1 auto; height: 2px; background: var(--ax-line-30); margin: 0 14px; min-width: 18px; }
   .rc-steps .on { opacity: 1; }
   .rc-steps .on .bul { background: var(--ax-brand); border-color: var(--ax-ink); color: #fff; }
@@ -221,12 +230,19 @@ _BASE_CSS = """
       box-shadow: var(--ax-sh-2); padding: 18px 22px; margin: 12px 0 16px; line-height: 1.7; }
   .rc-remark .h { font-family: var(--ax-head); font-size: 1.2rem; color: #fff; margin-bottom: 8px; }
 
-  /* ── 한 줄 안내 ── */
+  /* ── 한 줄 안내 ──
+     주의(warn)는 면 전체를 앰버로 채우지 않는다. 데이터 불일치·누락 안내는
+     한 화면에 여러 건이 함께 뜨는데, 전부 앰버 블록이면 화면이 경고판이 되고
+     정작 급한 오류(err)가 묻힌다. 주의는 조용한 페이퍼 + 앰버 점으로 두고,
+     색을 채우는 건 오류(코랄)와 완료(라임)에만 남긴다. */
   .rc-note { display: flex; gap: 10px; align-items: flex-start; border: var(--ax-bd); border-radius: var(--ax-r-m);
-      padding: 13px 16px; margin: 8px 0; font-size: .93rem; font-weight: 700; color: var(--ax-ink); line-height: 1.55; background: var(--ax-amber); }
-  .rc-note::before { content: ""; flex: 0 0 auto; width: 8px; height: 8px; margin-top: 8px; border-radius: var(--ax-r-full); background: var(--ax-ink); }
-  .rc-note.ok { background: var(--ax-lime); }
-  .rc-note.err { background: var(--ax-coral); color: #fff; }
+      padding: 13px 16px; margin: 8px 0; font-size: .93rem; font-weight: 600; color: var(--ax-ink); line-height: 1.55; background: var(--ax-paper-2); }
+  .rc-note::before { content: ""; flex: 0 0 auto; width: 8px; height: 8px; margin-top: 8px; border-radius: var(--ax-r-full); background: var(--ax-amber); }
+  .rc-note.info { background: var(--ax-paper); font-weight: 500; color: var(--ax-fg-2); }
+  .rc-note.info::before { background: var(--ax-fg-disabled); }
+  .rc-note.ok { background: var(--ax-lime); font-weight: 700; }
+  .rc-note.ok::before { background: var(--ax-ink); }
+  .rc-note.err { background: var(--ax-coral); color: #fff; font-weight: 700; }
   .rc-note.err::before { background: #fff; }
 
   /* ── 완료 배지 ── */
@@ -263,11 +279,13 @@ _BASE_CSS = """
   .stButton > button:disabled, .stButton > button:disabled:hover, .stDownloadButton > button:disabled { opacity: .3; box-shadow: none; transform: none; }
   .stButton > button[kind="primary"]:disabled { background: var(--ax-coral); opacity: .3; }
 
-  /* 업로드 드롭존 — 대시 잉크 보더 + 페이퍼2 */
-  [data-testid="stFileUploaderDropzone"] { border: var(--ax-bd-dash); background: var(--ax-paper-2); border-radius: var(--ax-r-xl); padding: 34px 24px;
-      transition: box-shadow var(--ax-dur) var(--ax-ease); }
-  [data-testid="stFileUploaderDropzone"]:hover { box-shadow: var(--ax-sh-1); }
-  [data-testid="stFileUploaderDropzone"] * { color: var(--ax-fg-2); font-weight: 700; }
+  /* 업로드 드롭존 — 얇은 회색 점선 + 회색 면.
+     굵은 잉크 점선은 '눌러야 하는 버튼'처럼 읽혀서, 떨어뜨리는 자리라는 뜻이
+     흐려진다. 보더를 얇게 빼고 면에 색을 줘서 영역 자체로 읽히게 한다. */
+  [data-testid="stFileUploaderDropzone"] { border: 1.5px dashed var(--ax-drop-bd); background: var(--ax-drop); border-radius: var(--ax-r-xl); padding: 30px 24px;
+      transition: border-color var(--ax-dur) var(--ax-ease), background var(--ax-dur) var(--ax-ease); }
+  [data-testid="stFileUploaderDropzone"]:hover { border-color: var(--ax-brand); background: var(--ax-brand-weak); }
+  [data-testid="stFileUploaderDropzone"] * { color: var(--ax-fg-3); font-weight: 600; }
   [data-testid="stFileUploaderDropzone"] button { background: var(--ax-paper); border: var(--ax-bd); border-radius: var(--ax-r-m); color: var(--ax-ink); font-weight: 700; }
   [data-testid="stFileUploaderFile"] { background: var(--ax-paper); border: var(--ax-bd); border-radius: var(--ax-r-m); padding: 9px 12px; margin-top: 6px; }
 
@@ -319,11 +337,19 @@ _BASE_CSS = """
 
   /* 상단 바 로고 · 칩 */
   .ax-topline { height: 2px; background: var(--ax-line); margin: 2px 0 22px; }
-  .st-key-ax_logo_btn button { background: transparent !important; border: 0 !important; padding: 4px 0 !important; min-height: 0 !important;
-      font-family: var(--ax-disp); font-weight: 800; font-size: 1.2rem; letter-spacing: -.02em; color: var(--ax-ink) !important; text-align: left; width: auto !important;
+  /* 상단 바 워드마크 — 대문 타이틀과 같은 서체·같은 2톤(잉크 + 코발트)으로
+     맞춘다. 작업 화면에서도 같은 브랜드라는 게 한눈에 읽혀야 한다. */
+  .st-key-ax_logo_btn button { background: transparent !important; border: 0 !important; padding: 2px 0 !important; min-height: 0 !important;
+      font-family: var(--ax-head); font-weight: 800; font-size: 1.56rem; letter-spacing: -.01em; color: var(--ax-ink) !important; text-align: left; width: auto !important;
       box-shadow: none !important; }
-  .st-key-ax_logo_btn button:hover { background: transparent !important; color: var(--ax-brand) !important; box-shadow: none !important; transform: none !important; }
-  .ax-topmeta { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; min-height: 38px; }
+  /* Streamlit 은 라벨을 `span > div[stMarkdownContainer] > p` 로 감싸고 그 div 에
+     16px 를 다시 못박는다. `inherit` 로는 못 뚫으므로 자손 전부에 값을 직접 준다. */
+  .st-key-ax_logo_btn button * { font-size: 1.56rem !important; font-weight: 800 !important; line-height: 1.15 !important; letter-spacing: -.01em; }
+  /* 'CAMPAIGN' — Streamlit 이 `:blue[…]` 을 인라인 style 로 그리므로 !important 로 덮는다 */
+  .st-key-ax_logo_btn button p span { color: var(--ax-brand) !important; }
+  .st-key-ax_logo_btn button:hover, .st-key-ax_logo_btn button:hover p { background: transparent !important; color: var(--ax-brand) !important; box-shadow: none !important; transform: none !important; }
+  .st-key-ax_logo_btn button:hover p span { color: var(--ax-ink) !important; }
+  .ax-topmeta { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; min-height: 42px; }
   .ax-chip { display: inline-block; padding: 6px 13px; border-radius: var(--ax-r-full); background: var(--ax-paper); color: var(--ax-fg-2); border: var(--ax-bd); font-size: .83rem; font-weight: 700; white-space: nowrap; }
   .ax-chip.strong { background: var(--ax-brand); color: #fff; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; }
   .ax-topact { height: 0; }
@@ -397,14 +423,15 @@ _LANDING_BASE = """
   .d1 { animation-delay: .02s; } .d2 { animation-delay: .08s; } .d3 { animation-delay: .14s; }
   .d4 { animation-delay: .20s; } .d5 { animation-delay: .26s; }
 
-  .after-hero { text-align: center; padding: 0; min-height: 48vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  /* 히어로 — 배지 · 워드마크 · 한 문장, 그리고 버튼. 그 이상은 두지 않는다.
+     min-height 를 낮게 잡아야 문구와 [입장하기] 사이가 벌어지지 않는다. */
+  .after-hero { text-align: center; padding: 0; min-height: 40vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
   .after-hero > * { margin-left: auto; margin-right: auto; }
   .after-badge { display: inline-block; margin-bottom: 22px; padding: 8px 16px; border: var(--ax-bd); border-radius: var(--ax-r-full);
       background: var(--ax-paper); color: var(--ax-ink); font-family: var(--ax-disp); font-size: .8rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
   .after-title { font-family: var(--ax-head); font-size: clamp(3rem, 8vw, 5.6rem); line-height: .98; letter-spacing: -.02em; color: var(--ax-fg); margin: 0 0 1.1rem; }
   .after-title .accent { color: var(--ax-brand); }
-  .stApp .after-lead { max-width: 660px; margin: 0 auto 1rem; font-size: 1.24rem; line-height: 1.6; font-weight: 700; color: var(--ax-fg); letter-spacing: -.01em; }
-  .stApp .after-body { max-width: 640px; margin: 0 auto; font-size: 1rem; line-height: 1.75; font-weight: 600; color: var(--ax-fg-2); }
+  .stApp .after-lead { max-width: 660px; margin: 0 auto; font-size: 1.24rem; line-height: 1.6; font-weight: 700; color: var(--ax-fg); letter-spacing: -.01em; }
 
   div[data-testid="stButton"] button[kind="primary"], div[data-testid="stButton"] button[kind="primary"] * { color: #FFFFFF !important; font-weight: 700 !important; }
   div[data-testid="stButton"] button[kind="primary"] { width: 100%; background: var(--ax-coral); border: var(--ax-bd); border-radius: var(--ax-r-l);
@@ -413,7 +440,8 @@ _LANDING_BASE = """
   div[data-testid="stButton"] button[kind="primary"]:hover { background: var(--ax-coral); box-shadow: var(--ax-sh-3); }
   div[data-testid="stButton"] button[kind="primary"]:active { transform: translate(3px,3px); box-shadow: var(--ax-sh-1); }
 
-  .after-notice { text-align: center; font-size: .86rem; font-weight: 700; color: var(--ax-fg-3); margin: 1.3rem 0 4rem; }
+  /* 각주 — 읽어야 하지만 주인공이 아니다. 본문보다 확실히 작고 얇게. */
+  .after-notice { text-align: center; font-size: .69rem; font-weight: 400; color: var(--ax-fg-3); margin: 1.1rem 0 3rem; letter-spacing: 0; }
 """
 
 LANDING_CSS = f"<style>{FONT_FACES}{_tokens()}{_LANDING_BASE}</style>"
@@ -423,13 +451,8 @@ HERO_HTML = """
   <div class="after-badge fade d1">비즈니스 3본부 AX</div>
   <h1 class="after-title fade d1">AFTER <span class="accent">CAMPAIGN</span></h1>
   <p class="after-lead fade d2">
-    <span class="kbr">흩어진 캠페인 자료를 올리면,</span>
+    <span class="kbr">흩어진 캠페인 자료를 올리면,</span><br>
     <span class="kbr">결과 리포트를 대신 만들어 드려요.</span>
-  </p>
-  <p class="after-body fade d3">
-    <span class="kbr">제안서부터 온에어 소재까지 수개월치 기록을 한곳에 모아,</span><br>
-    <span class="kbr">제안 목표와 실집행 실적을 대조하고</span>
-    <span class="kbr">다음 캠페인 전략까지 정리해 드려요.</span>
   </p>
 </div>
 """
@@ -536,8 +559,15 @@ def remark(title: str, lines: Sequence[str]) -> None:
 
 
 def note(text: str, level: str = 'warn') -> None:
-    """한 줄 안내 — level: ok | warn | err"""
-    cls = {'ok': 'ok', 'error': 'err', 'err': 'err'}.get(level, 'warn')
+    """
+    한 줄 안내 — level: info | ok | warn | err
+
+    색을 채우는 건 err(코랄)와 ok(라임)뿐이다. info 와 warn 은 조용한 면에
+    점 색으로만 구분한다. 한 화면에 안내가 열 건씩 뜨는 화면이라, 전부
+    색을 채우면 정작 급한 건을 못 찾는다.
+    """
+    cls = {'ok': 'ok', 'error': 'err', 'err': 'err',
+           'info': 'info'}.get(level, 'warn')
     st.markdown(f'<div class="rc-note {cls}">{_esc(text)}</div>',
                 unsafe_allow_html=True)
 
