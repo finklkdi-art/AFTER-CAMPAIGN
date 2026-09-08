@@ -36,6 +36,8 @@ from ingest import UploadWorkspace, Progress
 from utils.capture import capture_output
 from dashboard import state, theme_css as T
 
+DRM_HINT = 'DRM(나스카) 해제 후 업로드가 필요해요.'
+
 UPLOAD_HINT = (
     'PDF보다 원본 파일(PPTX · XLSX)을 올리시면 인식이 더 정확해요. '
     '용량이 크면 읽는 데 시간이 꽤 걸릴 수 있어요.'
@@ -259,6 +261,7 @@ def _render_upload(project_root: Path) -> None:
         type=ACCEPTED, accept_multiple_files=True, key='ax_uploader',
         label_visibility='collapsed')
 
+    T.note(DRM_HINT, 'warn')
     T.note(UPLOAD_HINT, 'ok')
 
     if not files:
