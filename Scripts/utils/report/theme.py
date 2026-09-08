@@ -50,6 +50,15 @@ BG_CARD = 'F2F2F2'
 DARK_NAVY = '1B2A4A'
 DARK_APPX = '15161A'
 
+# 2026.09.09 추가 — 레퍼런스 실측에서 빠져 있던 토큰
+PANEL = 'F8F9FD'        # 전폭 콘텐츠 패널 (흰 카드를 띄우는 지면)
+TBL_LABEL = 'F2F2F2'    # 표 좌측 구분열
+CONCLUSION = '1457C9'   # 하단 전폭 결론 밴드 (흰 글자)
+FLAG_A = '7CC7EE'       # 셰브런 플래그 그라디언트 시작
+FLAG_B = '2C7BD6'       # 셰브런 플래그 그라디언트 끝
+BASELINE_BAR = 'DDE7F2'  # 제안값(비교 기준) 막대 — 결과 막대와 명도로만 대비
+GRIDLINE = 'EDEDED'     # 차트 가로 격자선 (세로선은 쓰지 않음)
+
 # ───────────────────────── 폰트 (bold 플래그 금지 — 이름으로 웨이트 선택)
 HEAD_BOLD = 'Samsung SS Head KR Bold'
 HEAD_MED = 'Samsung SS Head KR Medium'
@@ -62,15 +71,58 @@ BODY_LIGHT = 'Samsung SS Body KR Light'
 ALLOWED_FONTS = {HEAD_BOLD, HEAD_MED, HEAD_REG, HEAD_LIGHT,
                  BODY_BOLD, BODY_REG, BODY_LIGHT}
 
-# ───────────────────────── 공통 지오메트리 (design-spec.md §3)
+# ───────────────────────── 공통 지오메트리
+#
+# 2026.09.09 개정 — 레퍼런스 4개 덱 265슬라이드의 PPTX 좌표 실측값으로 교체함.
+# 근거·편차는 `.claude/skills/report-design-system/reference/design-system.md`.
+# 아래 값은 전부 4개 덱의 최빈값(mode)이며 단위는 inch.
 SLIDE_W = 13.333
 SLIDE_H = 7.5
-TAG_POS = (0.49, 0.28, 6.0, 0.32)        # L3a 캠페인 태그
-SEC_SQ = (0.52, 0.72, 0.09, 0.09)        # ■ 액센트
-SEC_POS = (0.70, 0.63, 11.0, 0.30)       # L3b 섹션 라벨
-KEY_POS = (0.63, 1.22, 12.06, 1.25)      # L4 키메시지
-CONTENT_Y = 2.60
-FOOT_Y = 7.02
+
+TAG_POS = (0.49, 0.30, 6.0, 0.32)        # L3a 캠페인 태그 · 16pt Head Medium
+RULE_POS = (0.55, 0.69, 2.46)            # L3 헤더 괘선 (x, y, 최대폭) · 1px
+FLAG_POS = (0.55, 0.77, 0.22, 0.23)      # L3 셰브런 플래그 (■ 사각에서 교체)
+SEC_POS = (0.70, 0.75, 11.0, 0.30)       # L3b 섹션 라벨 · 16pt Head Medium
+#   괘선(0.69) → 플래그·라벨(0.75~0.77) 사이 0.06~0.08in 을 띄운다.
+#   실측 R03 = 괘선 0.68 / 플래그 0.80, R04 = 괘선 0.69 / 플래그 0.74 의 중간값.
+#   같은 y 에 두면 라벨 글자가 괘선 위에 얹혀 두 줄이 붙어 읽힌다.
+KEY_POS = (0.99, 1.24, 11.36, 1.30)      # L4 키메시지 — 중심 6.667 = 캔버스 중심
+CONTENT_Y = 2.56                         # 전폭 콘텐츠 패널 상단
+FOOT_POS = (0.38, 7.02, 12.06)           # L8 각주 (x, y, w)
+FOOT_Y = FOOT_POS[1]                     # 하위 호환
+
+# 타이포 스케일 — 실측에 존재하는 크기만. 중간값(13·15·17·22)을 만들지 말 것.
+SZ_COVER = 36
+SZ_SECTION = 28
+SZ_KEY = 24                              # 키메시지 · 본문 12pt 대비 2.0 : 1
+SZ_KEY_SUB = 18
+SZ_TAG = 16
+SZ_CARD_TITLE = 14
+SZ_BODY = 12
+SZ_LABEL = 11                            # 대괄호 소제목
+SZ_TABLE = 10
+SZ_CHART = 9
+SZ_FOOT = 8
+
+# 표 행 높이 사다리 — 행이 넘치면 행을 지우지 말고 이 단계로 낮춘다 (CLAUDE.md 3.1)
+ROW_H_LADDER = (0.403, 0.37, 0.311, 0.234, 0.144)
+
+
+def row_height_for(n_rows: int, *, top: float = CONTENT_Y + 0.45,
+                   bottom: float = FOOT_Y - 0.10) -> float:
+    """
+    행 수에 맞는 행 높이를 사다리에서 고른다.
+
+    실측 근거 — 8행 이하 0.403/0.37 · 12행 0.311 · 17행 0.234 · 30행 0.144.
+    사다리의 가장 큰 값부터 시도해 세로 공간에 들어가는 첫 값을 쓴다.
+    다 안 들어가면 마지막 값(0.144)을 쓰되, 그래도 넘치면 호출부가
+    페이지를 나눠야 한다 — 여기서 행을 버리지 않는다.
+    """
+    avail = max(bottom - top, 0.5)
+    for h in ROW_H_LADDER:
+        if h * max(n_rows, 1) <= avail:
+            return h
+    return ROW_H_LADDER[-1]
 
 
 # ═════════════════════════ 저수준 유틸
@@ -173,51 +225,180 @@ def set_slide_background(slide, hex6: str) -> None:
 
 # ═════════════════════════ 레벨별 컴포넌트 (theme.js 포팅)
 
-def add_header(slide, campaign_tag: str, section_label: str) -> None:
-    """L3a 캠페인 태그 + L3b ■ 섹션 라벨"""
-    add_text(slide, *TAG_POS, [(campaign_tag, BODY_BOLD, 12, BLACK)])
-    add_rect(slide, *SEC_SQ, BLUE_MAIN)
-    add_text(slide, *SEC_POS, [(section_label, BODY_REG, 12, BLACK)])
-
-
-def add_key_message(slide, parts: Sequence[dict], hilites=None) -> None:
+def add_chevron_flag(slide, x: float, y: float,
+                     w: float = FLAG_POS[2], h: float = FLAG_POS[3]):
     """
-    L4 키메시지. parts = [{'text', 'emph'?, 'color'?, 'break'?}]
-    비강조 = Body Light / 강조 = Body Bold + BLUE_EMPH (bold 플래그 아님)
+    L3 셰브런 플래그 — 섹션 라벨 앞의 방향 표식.
+
+    레퍼런스 R01·R03·R04 가 **동일한 원본 이미지**(266×245px, 동일 crop)를
+    공유하는 사내 공용 자산이다. 우리는 그 이미지를 배포할 수 없으므로
+    같은 실루엣(오른쪽을 향한 갈매기)을 CHEVRON 도형 + 좌→우 그라디언트로
+    재현한다. 종전의 ■ 정사각(SEC_SQ)은 레퍼런스에 존재하지 않아 폐기했다.
+    """
+    sh = slide.shapes.add_shape(
+        MSO_SHAPE.CHEVRON, Inches(x), Inches(y), Inches(w), Inches(h))
+    sh.shadow.inherit = False
+    sh.line.fill.background()
+    try:
+        sh.fill.gradient()
+        stops = sh.fill.gradient_stops
+        stops[0].color.rgb = _rgb(FLAG_A)
+        stops[1].color.rgb = _rgb(FLAG_B)
+        sh.fill.gradient_angle = 0.0
+    except Exception:                    # 그라디언트 미지원 시 단색 폴백
+        sh.fill.solid()
+        sh.fill.fore_color.rgb = _rgb(FLAG_B)
+    return sh
+
+
+def add_header(slide, campaign_tag: str, section_label: str,
+               page_function: Optional[str] = None) -> None:
+    """
+    L3 페이지 헤더 — 4개 덱 전부에 존재하는 유일한 필수 컴포넌트.
+
+    구성 (실측)
+        y 0.30  캠페인 태그      16pt Head Medium
+                page_function 이 있으면 "태그 ｜ 기능명" 으로 잇고
+                기능명만 Head Regular 로 낮춘다 (R01 s6 관례)
+        y 0.69  헤더 괘선        1px 검정 · 폭은 태그 글자수에 hug
+        y 0.74  셰브런 플래그 + 섹션 라벨 16pt Head Medium
+    """
+    runs = [(campaign_tag, HEAD_MED, SZ_TAG, BLACK)]
+    if page_function:
+        runs.append((' ｜ ', HEAD_LIGHT, SZ_TAG, BLACK))
+        runs.append((page_function, HEAD_REG, SZ_TAG, BLACK))
+    add_text(slide, *TAG_POS, runs)
+
+    # 괘선은 태그 텍스트 폭을 따라간다. 한글은 16pt 에서 약 0.22in/자,
+    # 라틴·기호는 그 절반으로 잡아 근사한다 (실측 폭 1.48 ~ 2.46in).
+    label = campaign_tag + (f' ｜ {page_function}' if page_function else '')
+    est = sum(0.22 if ord(ch) > 0x2000 else 0.11 for ch in label)
+    rx, ry, rmax = RULE_POS
+    add_rect(slide, rx, ry, min(max(est, 1.0), rmax), 0.01, BLACK)
+
+    add_chevron_flag(slide, FLAG_POS[0], FLAG_POS[1])
+    add_text(slide, *SEC_POS, [(section_label, HEAD_MED, SZ_TAG, BLACK)],
+             anchor=MSO_ANCHOR.MIDDLE)
+
+
+def add_key_message(slide, parts: Sequence[dict], hilites=None,
+                    kicker: Optional[str] = None,
+                    sub: Optional[str] = None) -> None:
+    """
+    L4 키메시지 — 페이지의 결론을 먼저 말하는 한 문장.
+
+    2026.09.09 개정 — 레퍼런스 실측에 맞춰 3단 구조로 바꿨다.
+        kicker   18pt Head Light  #404040   (기간·범위 등 맥락)
+        MAIN     24pt Head Bold   #000000   ← parts 가 여기 들어간다
+        sub      18pt Head Light  #404040   (보조 수치)
+    전 줄 중앙 정렬. 종전 20pt Body 계열에서 24pt Head 계열로 올린 이유는
+    본문 12pt 대비 2.0 : 1 비율이 4개 덱 공통이기 때문 (24/12).
+
+    parts = [{'text', 'emph'?, 'color'?, 'break'?}]
+        emph=False → Head Light  (같은 줄 안의 비강조 어절)
+        emph=True  → Head Bold   (강조 어절)
+        color 를 주면 그 색으로 (액센트 강조는 BLUE_SKY 사용)
     hilites = [(x, w)] 형광펜 사각형 (텍스트 뒤 z-order)
     """
     for hx, hw in (hilites or []):
         add_rect(slide, hx, 1.64, hw, 0.20, HILITE)
 
-    paragraphs: List[List[tuple]] = [[]]
+    paragraphs: List[List[tuple]] = []
+    if kicker:
+        paragraphs.append([(kicker, HEAD_LIGHT, SZ_KEY_SUB, INK)])
+
+    main: List[List[tuple]] = [[]]
     for p in parts:
-        face = BODY_BOLD if p.get('emph') else BODY_LIGHT
-        color = p.get('color') or (BLUE_EMPH if p.get('emph') else INK)
-        paragraphs[-1].append((p['text'], face, 20, color))
+        face = HEAD_BOLD if p.get('emph') else HEAD_LIGHT
+        color = p.get('color') or BLACK
+        main[-1].append((p['text'], face, SZ_KEY, color))
         if p.get('break'):
-            paragraphs.append([])
-    if not paragraphs[-1]:
-        paragraphs.pop()
+            main.append([])
+    if not main[-1]:
+        main.pop()
+    paragraphs.extend(main)
+
+    if sub:
+        paragraphs.append([(sub, HEAD_LIGHT, SZ_KEY_SUB, INK)])
 
     add_text(slide, *KEY_POS, paragraphs,
              align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
 
 
 def add_block_label(slide, text: str, x: float, y: float, w: float = 6.0) -> None:
-    """L5 블록라벨 — '[ ... ]'"""
-    add_text(slide, x, y, w, 0.28, [(f'[ {text} ]', BODY_BOLD, 11, BLACK)])
+    """
+    L5 블록라벨 — '[ ... ]'. 표·차트·이미지 그룹 등 **데이터 블록** 위에만 붙는다.
+    문장에는 쓰지 않는다. 실측 11pt Head Regular (Body Bold 아님).
+    블록 상단에서 0.29in 위에 놓는 것이 레퍼런스 관례.
+    """
+    add_text(slide, x, y, w, 0.28, [(f'[ {text} ]', HEAD_REG, SZ_LABEL, BLACK)])
 
 
 def add_footnote(slide, notes, y: float = FOOT_Y) -> None:
-    """L8 각주/출처 — '* ' 접두"""
+    """
+    L8 각주/출처 — '* ' 접두. 실측 8pt **Body KR Light** (Regular 아님),
+    x 0.38 좌측 정렬. 출처·산식·제외 조건을 여기 명시한다.
+    """
     arr = notes if isinstance(notes, (list, tuple)) else [notes]
     paragraphs = [[((n if str(n).startswith('*') else f'* {n}'),
-                    BODY_REG, 8, FOOT)] for n in arr]
-    add_text(slide, 0.63, y, 12.06, 0.40, paragraphs)
+                    BODY_LIGHT, SZ_FOOT, FOOT)] for n in arr]
+    fx, _fy, fw = FOOT_POS
+    add_text(slide, fx, y, fw, 0.40, paragraphs)
+
+
+def add_content_panel(slide, y: float = CONTENT_Y, fill: str = PANEL):
+    """
+    전폭 콘텐츠 패널 — x 0 · w 13.33, y 에서 하단까지. 흰 카드를 띄우는 지면.
+    4개 덱 전부가 y 2.52 ~ 2.76 에서 이 패널을 깐다. 그림자 없이
+    명도차만으로 카드를 분리하는 것이 이 시스템의 깊이 표현이다.
+    """
+    return add_rect(slide, 0, y, SLIDE_W, SLIDE_H - y, fill)
+
+
+def add_conclusion_band(slide, lines: Sequence[str], *, y: float = 4.50,
+                        notch: bool = True):
+    """
+    하단 전폭 결론 밴드 (R03 P04 원형) — 근거를 위에 쌓고 결론을 여기서 선언한다.
+
+    x 0 · y 4.50 · 13.33 × 3.00in · #1457C9 · 흰 20~24pt Head Bold.
+    상변 중앙에 아래를 향한 삼각 노치. **페이지당 1회**, 장(章)당 1회 이내.
+    """
+    band = add_rect(slide, 0, y, SLIDE_W, SLIDE_H - y, CONCLUSION)
+    if notch:
+        tri = slide.shapes.add_shape(
+            MSO_SHAPE.ISOSCELES_TRIANGLE,
+            Inches(SLIDE_W / 2 - 0.70), Inches(y), Inches(1.40), Inches(0.60))
+        tri.rotation = 180
+        tri.shadow.inherit = False
+        tri.line.fill.background()
+        tri.fill.solid()
+        tri.fill.fore_color.rgb = _rgb(WHITE)
+    add_text(slide, 0, y + 0.85, SLIDE_W, SLIDE_H - y - 1.2,
+             [[(t, HEAD_BOLD, SZ_KEY_SUB + 2, WHITE)] for t in lines],
+             align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, line_spacing=1.4)
+    return band
+
+
+def add_kpi_tile(slide, x: float, y: float, w: float, h: float, *,
+                 label: str, value: str, caption: str = '',
+                 negative: bool = False):
+    """
+    KPI 타일 — 제안 대비 달성률 한 칸. 실측 1.31~1.49 × 1.56~1.73in.
+    숫자 24~28pt Head Bold · 달성 #0096FF / 미달 #D96D77.
+    """
+    add_rect(slide, x, y, w, h, WHITE, LINE_CARD, 0.5)
+    add_text(slide, x, y + 0.14, w, 0.24, [(label, HEAD_LIGHT, SZ_LABEL, FOOT)],
+             align=PP_ALIGN.CENTER)
+    add_text(slide, x, y + 0.40, w, 0.55,
+             [(value, HEAD_BOLD, SZ_KEY, NEG if negative else BLUE_SKY)],
+             align=PP_ALIGN.CENTER)
+    if caption:
+        add_text(slide, x, y + h - 0.34, w, 0.24,
+                 [(caption, HEAD_LIGHT, SZ_TABLE, INK)], align=PP_ALIGN.CENTER)
 
 
 def add_divider(slide, text: str, *, appendix: bool = False,
-                font_size: int = 30) -> None:
+                font_size: int = SZ_SECTION) -> None:
     """L2 간지 / E.O.D — 다크 배경 정중앙"""
     set_slide_background(slide, DARK_APPX if appendix else DARK_NAVY)
     add_text(slide, 0, 3.2, SLIDE_W, 1.1, [(text, HEAD_BOLD, font_size, WHITE)],
@@ -242,16 +423,43 @@ def _cell_border(cell, color: str = LINE, pt: float = 0.5) -> None:
         tcPr.append(ln)
 
 
+def _cell_hatch(cell, color: str = 'E4E4E4') -> None:
+    """
+    결측 셀 45° 사선 해칭.
+
+    빈칸이나 0 을 쓰면 '값이 0' 과 '측정되지 않음' 이 구별되지 않는다.
+    레퍼런스(R04 s7)는 측정 불가 칸을 전부 사선으로 채워 이를 구분한다.
+    python-pptx 에 패턴 채우기 API 가 없어 XML 로 직접 넣는다.
+    """
+    tcPr = cell._tc.get_or_add_tcPr()
+    for tag in ('a:solidFill', 'a:noFill', 'a:pattFill'):
+        for el in tcPr.findall(qn(tag)):
+            tcPr.remove(el)
+    patt = tcPr.makeelement(qn('a:pattFill'), {'prst': 'ltUpDiag'})
+    fg = patt.makeelement(qn('a:fgClr'), {})
+    fg.append(fg.makeelement(qn('a:srgbClr'), {'val': color}))
+    bg = patt.makeelement(qn('a:bgClr'), {})
+    bg.append(bg.makeelement(qn('a:srgbClr'), {'val': WHITE}))
+    patt.append(fg)
+    patt.append(bg)
+    tcPr.append(patt)
+
+
 def add_styled_table(slide, header: Sequence[str], rows: Sequence[Sequence],
                      *, x: float, y: float, w: float,
                      col_w: Optional[Sequence[float]] = None,
                      font_size: float = 9, row_h: float = 0.24,
-                     total_row: bool = False):
+                     total_row: bool = False, label_col: bool = False):
     """
-    표준 표. 셀 값: 문자열 또는 {'t', 'right'?, 'hilite'?}
-    - 헤더행 E1F3FF (bold 아님 — 원본 관례)
-    - Total행 767171 + 흰 글씨
-    - 강조 셀 FEF5BE
+    표준 표. 셀 값: 문자열 또는 {'t', 'right'?, 'hilite'?, 'na'?}
+
+    실측 규격
+      - 헤더행 #E1F3FF + 검정 **Head Medium** (Body Regular 아님 · 2026.09.09 교정)
+      - 본문 Body Regular · 중앙 정렬 (이 시스템의 표는 우측 정렬을 쓰지 않음)
+      - 강조 셀 #FEF5BE + Body Bold — 페이지당 하나의 강조 장치로만
+      - Total행 #767171 + 흰 Head Medium · 최하단 1행만
+      - label_col=True 면 0열을 #F2F2F2 구분열로 (병합 대신 색으로 구분)
+      - {'na': True} 셀은 45° 사선 해칭 — 빈칸·0 과 '측정 안 됨'을 구분한다
     """
     n_rows = len(rows) + 1
     n_cols = len(header)
@@ -278,13 +486,16 @@ def add_styled_table(slide, header: Sequence[str], rows: Sequence[Sequence],
     for r in range(n_rows):
         table.rows[r].height = Emu(int(row_h * EMU_PER_IN))
 
-    def put(r, c, value, *, fill, color, right=False):
+    def put(r, c, value, *, fill, color, right=False,
+            face=BODY_REG, na=False):
         cell = table.cell(r, c)
         cell.margin_left = cell.margin_right = Emu(27432)   # 0.03in
         cell.margin_top = cell.margin_bottom = 0
         cell.vertical_anchor = MSO_ANCHOR.MIDDLE
         cell.fill.solid()
         cell.fill.fore_color.rgb = _rgb(fill)
+        if na:
+            _cell_hatch(cell)
         _cell_border(cell)
         tf = cell.text_frame
         tf.word_wrap = True
@@ -292,10 +503,10 @@ def add_styled_table(slide, header: Sequence[str], rows: Sequence[Sequence],
         p.alignment = PP_ALIGN.RIGHT if right else PP_ALIGN.CENTER
         run = p.add_run()
         run.text = str(value)
-        set_run_font(run, BODY_REG, font_size, color)
+        set_run_font(run, face, font_size, color)
 
     for c, h in enumerate(header):
-        put(0, c, h, fill=TBL_HEAD, color=BLACK)
+        put(0, c, h, fill=TBL_HEAD, color=BLACK, face=HEAD_MED)
 
     for ri, row in enumerate(rows, start=1):
         is_total = total_row and ri == n_rows - 1
@@ -303,10 +514,18 @@ def add_styled_table(slide, header: Sequence[str], rows: Sequence[Sequence],
         # 슬라이드를 잃지 않는다. 넘치는 칸은 그리지 않는다.
         for c, cell_val in enumerate(row[:n_cols]):
             spec = cell_val if isinstance(cell_val, dict) else {'t': cell_val}
-            fill = TOTAL_ROW if is_total else (HILITE if spec.get('hilite') else WHITE)
-            color = WHITE if is_total else BLACK
-            put(ri, c, spec.get('t', ''), fill=fill, color=color,
-                right=bool(spec.get('right')))
+            is_na = bool(spec.get('na'))
+            is_label = label_col and c == 0 and not is_total
+            if is_total:
+                fill, color, face = TOTAL_ROW, WHITE, HEAD_MED
+            elif spec.get('hilite'):
+                fill, color, face = HILITE, BLACK, BODY_BOLD
+            elif is_label:
+                fill, color, face = TBL_LABEL, BLACK, HEAD_MED
+            else:
+                fill, color, face = WHITE, BLACK, BODY_REG
+            put(ri, c, spec.get('t', ''), fill=fill, color=color, face=face,
+                right=bool(spec.get('right')), na=is_na)
     return gf
 
 

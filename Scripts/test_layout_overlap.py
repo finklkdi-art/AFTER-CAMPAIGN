@@ -160,9 +160,30 @@ def check_theme_constants() -> list:
         problems.append('CONTENT_Y 가 FOOT_Y 보다 아래')
     if TH.FOOT_Y >= TH.SLIDE_H:
         problems.append('FOOT_Y 가 슬라이드 높이를 벗어남')
-    sq_y, sq_h = TH.SEC_SQ[1], TH.SEC_SQ[3]
-    if sq_y + sq_h > key_y + 1e-6:
-        problems.append('SEC_SQ 가 KEY_POS 를 침범')
+
+    # 헤더 3단 — 태그 → 괘선 → 셰브런 플래그가 서로/키메시지를 침범하지 않는가
+    # (2026.09.09 — ■ 사각 SEC_SQ 를 셰브런 플래그로 교체하며 함께 개정)
+    tag_y, tag_h = TH.TAG_POS[1], TH.TAG_POS[3]
+    rule_y = TH.RULE_POS[1]
+    flag_y, flag_h = TH.FLAG_POS[1], TH.FLAG_POS[3]
+    if tag_y + tag_h > rule_y + 1e-6:
+        problems.append(
+            f'TAG_POS(끝 {tag_y + tag_h:.2f}in) 가 RULE_POS({rule_y:.2f}in) 를 침범')
+    if flag_y + flag_h > key_y + 1e-6:
+        problems.append(
+            f'FLAG_POS(끝 {flag_y + flag_h:.2f}in) 가 KEY_POS({key_y:.2f}in) 를 침범')
+
+    # 키메시지는 캔버스 중앙에 놓여야 한다 (4개 덱 68/72 슬라이드의 규칙)
+    center = TH.KEY_POS[0] + TH.KEY_POS[2] / 2
+    if abs(center - TH.SLIDE_W / 2) > 0.02:
+        problems.append(
+            f'KEY_POS 중심({center:.3f}in) 이 캔버스 중심'
+            f'({TH.SLIDE_W / 2:.3f}in) 과 어긋남')
+
+    # 표 행 높이 사다리는 내림차순이어야 한다 (넘칠 때 단계적으로 낮추는 용도)
+    ladder = list(TH.ROW_H_LADDER)
+    if ladder != sorted(ladder, reverse=True):
+        problems.append('ROW_H_LADDER 가 내림차순이 아님')
     return problems
 
 

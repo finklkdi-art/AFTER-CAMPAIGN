@@ -236,12 +236,17 @@ def slide_html(slide, campaign_tag: str = '', *,
             f'top:{s.fy(TH.TAG_POS[1])};font-size:{s.ff(9, 7)}">'
             f'{_esc(campaign_tag)}</div>')
 
-    # L3b 섹션 라벨 + ■ 액센트
+    # L3 헤더 괘선 + 셰브런 플래그 + 섹션 라벨
+    # (2026.09.09 — ■ 사각을 산출물과 같은 셰브런으로 교체. 미리보기가
+    #  실제 PPTX 와 다른 표식을 그리면 AE 가 화면으로 검수할 수 없다.)
     if section and not hero:
         parts.append(
-            f'<div class="sp-sq" style="left:{s.fx(TH.SEC_SQ[0])};'
-            f'top:{s.fy(TH.SEC_SQ[1])};width:{s.fx(TH.SEC_SQ[2])};'
-            f'height:{s.fy(TH.SEC_SQ[3])}"></div>')
+            f'<div class="sp-rule" style="left:{s.fx(TH.RULE_POS[0])};'
+            f'top:{s.fy(TH.RULE_POS[1])};width:{s.fx(TH.RULE_POS[2])}"></div>')
+        parts.append(
+            f'<div class="sp-flag" style="left:{s.fx(TH.FLAG_POS[0])};'
+            f'top:{s.fy(TH.FLAG_POS[1])};width:{s.fx(TH.FLAG_POS[2])};'
+            f'height:{s.fy(TH.FLAG_POS[3])}"></div>')
         parts.append(
             f'<div class="sp-sec" style="left:{s.fx(TH.SEC_POS[0])};'
             f'top:{s.fy(TH.SEC_POS[1])};font-size:{s.ff(11, 8.5)}">'
@@ -302,8 +307,8 @@ def slide_html(slide, campaign_tag: str = '', *,
     # 출처 푸터
     if src and not hero:
         parts.append(
-            f'<div class="sp-foot" style="left:{s.fx(0.63)};'
-            f'top:{s.fy(TH.FOOT_Y)};width:{s.fx(12.06)};'
+            f'<div class="sp-foot" style="left:{s.fx(TH.FOOT_POS[0])};'
+            f'top:{s.fy(TH.FOOT_Y)};width:{s.fx(TH.FOOT_POS[2])};'
             f'height:{s.fy(TH.SLIDE_H - TH.FOOT_Y - 0.06)};'
             f'font-size:{s.ff(7, 6.5)}">{_esc(src)}</div>')
 
@@ -338,9 +343,11 @@ def slide_css() -> str:
       max-width: 100%; box-sizing: border-box;
   }}
   .sp-slide > div {{ position: absolute; }}
-  .sp-tag  {{ color: #{TH.BLUE_MAIN}; font-weight: 700; letter-spacing: -.02em; }}
-  .sp-sq   {{ background: #{TH.BLUE_MAIN}; }}
-  .sp-sec  {{ color: #{TH.BLUE_MAIN}; font-weight: 700; letter-spacing: -.02em;
+  .sp-tag  {{ color: #{TH.BLACK}; font-weight: 700; letter-spacing: -.02em; }}
+  .sp-rule {{ background: #{TH.BLACK}; height: 1px; }}
+  .sp-flag {{ background: linear-gradient(100deg, #{TH.FLAG_A}, #{TH.FLAG_B});
+             clip-path: polygon(0 0, 72% 0, 100% 50%, 72% 100%, 0 100%, 26% 50%); }}
+  .sp-sec  {{ color: #{TH.BLACK}; font-weight: 700; letter-spacing: -.02em;
              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
   .sp-key  {{ color: #{TH.INK}; font-weight: 700; letter-spacing: -.025em;
              word-break: keep-all; overflow-wrap: anywhere;

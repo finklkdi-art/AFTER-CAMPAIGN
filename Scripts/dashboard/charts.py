@@ -291,7 +291,7 @@ def totals_row(df: pd.DataFrame, dataset=None) -> None:
     """
     if df.empty:
         return
-    act_i = float(df['실집행노출'].sum())
+    act_i = float(df['노출'].sum())
 
     camp = campaign_actuals(dataset) if dataset is not None else {}
     show_i = camp.get('impressions') or act_i
@@ -360,14 +360,14 @@ def panel(dataset, selected: Sequence[str], *, metric: str = '노출',
             st.markdown('##### 매체별 집행 비중')
             budget_pie(df)
         with right:
-            st.markdown(f'##### 계획 vs 실집행 · {metric}')
-            plan_vs_actual_bar(df, metric)
+            st.markdown(f'##### 매체별 {metric}')
+            media_metric_bar(df, metric)
     elif show_pie:
         st.markdown('##### 매체별 집행 비중')
         budget_pie(df)
     elif show_bar:
-        st.markdown(f'##### 계획 vs 실집행 · {metric}')
-        plan_vs_actual_bar(df, metric)
+        st.markdown(f'##### 매체별 {metric}')
+        media_metric_bar(df, metric)
 
     if empty:
         T.note('데이터가 없어 차트에서 제외된 매체 — ' + ', '.join(empty)
