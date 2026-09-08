@@ -50,34 +50,44 @@ def _base(chart: alt.Chart, height: int) -> alt.Chart:
 def media_frame(dataset, selected: Optional[Sequence[str]] = None
                 ) -> Tuple[pd.DataFrame, List[str]]:
     """
-    매체별 계획/실적을 한 프레임으로 모은다.
+    매체별 실적을 한 프레임으로 모은다.
+
+    '매체 집행 계획'은 애초에 정량값으로 존재하지 않는다 — 미디어믹스의
+    예상치는 제안 시점 값이라 부킹 뒤 실집행과 대조할 근거가 못 된다
+    (2026.09.09 계획 대비 비교를 화면·PPTX 양쪽에서 전면 제거). 그래서 이
+    프레임은 **실집행 실적만** 담는다.
 
     Returns:
         (프레임, 값이 없어 차트에서 빠진 매체명 목록)
 
-        프레임 컬럼: 매체 / 계획예산 / 계획노출 / 실집행비 / 실집행노출
+        프레임 컬럼: 매체 / 실집행비 / 노출 / 조회 / 클릭 / VTR / CPC / CPV
     """
     agg: Dict[str, Dict[str, float]] = {}
 
     def bucket(name: str) -> Dict[str, float]:
         return agg.setdefault(
             (name or '(매체 미상)').strip(),
-            {'계획예산': 0.0, '계획노출': 0.0, '실집행비': 0.0, '실집행노출': 0.0})
+            {'실집행비': 0.0, '노출': 0.0, '조회': 0.0, '클릭': 0.0,
+             'VTR': 0.0, 'CPC': 0.0, 'CPV': 0.0})
 
     if dataset is not None:
-        for line in dataset.plan_lines():
-            b = bucket(line.media)
-            b['계획예산'] += float(line.budget or 0)
-            b['계획노출'] += float(line.expected_impressions or 0)
-
         dr = getattr(dataset, 'daily_report', None)
         if dr is not None:
             # 매체 간 비교 기준은 media_totals (축 혼재로 인한 이중 계상 방지)
+            # — 매체당 한 행이라 비율 지표(VTR·CPC·CPV)도 그대로 옮기면 된다.
             for perf in (dr.media_totals or []):
                 b = bucket(perf.media)
                 m = perf.metrics
                 b['실집행비'] += float(perf.budget or m.spend or m.billed or 0)
-                b['실집행노출'] += float(m.impressions or 0)
+                b['노출'] += float(m.impressions or 0)
+                b['조회'] += float(m.views or 0)
+                b['클릭'] += float(m.clicks or 0)
+                if m.vtr:
+                    b['VTR'] = float(m.vtr)
+                if m.cpc:
+                    b['CPC'] = float(m.cpc)
+                if m.cpv:
+                    b['CPV'] = float(m.cpv)
 
     rows, empty = [], []
     for name, v in agg.items():
@@ -90,7 +100,7 @@ def media_frame(dataset, selected: Optional[Sequence[str]] = None
 
     df = pd.DataFrame(rows)
     if not df.empty:
-        df = df.sort_values('계획예산', ascending=False, ignore_index=True)
+        df = df.sort_values('노출', ascending=False, ignore_index=True)
     return df, empty
 
 
@@ -115,10 +125,19 @@ def media_names(dataset) -> List[str]:
     return seen
 
 
-# 계획과 나란히 놓아도 되는 지표.
-# 매체비(예산)는 여기 없다 — 계획 예산은 제안 시점 값이라 집행 결과와
-# 대조하면 사실과 다른 증감이 만들어진다 (2026.09.08 제거).
-_COMPARABLE_METRICS = ('노출',)
+# 매체별로 비교해 볼 수 있는 지표.
+# 값 = df 컬럼에서 바로 읽는다 (media_frame 이 집계). 단위는 표기·서식에 쓴다.
+#   count — 그대로 합산된 값 (노출·조회·클릭)
+#   pct   — 0~1 비율 (VTR)
+#   won   — 원 단위 비용 (CPC·CPV)
+# '50% 재생완료' 계열은 파서가 아직 그 값을 읽지 않아 데이터가 없다
+# (COLUMN_ALIASES 에 대응 헤더가 없음 — 실 파일의 정확한 표기를 확인한
+# 뒤에 넣을 것. 임의로 헤더를 추정해 매칭하지 않는다, claude.md 3.3).
+METRIC_UNITS = {
+    '노출': 'count', '조회': 'count', '클릭': 'count',
+    'VTR': 'pct', 'CPC': 'won', 'CPV': 'won',
+    '50% 재생완료': None, '50% 재생완료율': None, '50% 재생완료 CPV': None,
+}
 
 
 # ═══════════════════════════ 차트
@@ -139,64 +158,75 @@ def budget_pie(df: pd.DataFrame, column: str = '실집행비',
     total = float(data[column].sum())
     data = data.assign(비중=lambda d: d[column] / total)
 
-    chart = (alt.Chart(data)
-             .mark_arc(innerRadius=64, outerRadius=118, stroke='#FFFFFF',
-                       strokeWidth=2, cornerRadius=3)
-             .encode(
-                 theta=alt.Theta(f'{column}:Q', stack=True),
-                 # 범례를 우측에 두면 좁은 칼럼에서 도넛과 겹쳐 라벨이 잘리고,
-                 # 2열로 접으면 둘째 열이 칼럼 밖으로 밀린다. 아래 1열이
-                 # 어떤 폭에서도 안전하다.
-                 color=alt.Color('매체:N',
-                                 scale=alt.Scale(range=SERIES),
-                                 legend=alt.Legend(title=None, orient='bottom',
-                                                   columns=1, labelLimit=180,
-                                                   symbolType='circle')),
-                 tooltip=['매체:N',
-                          alt.Tooltip(f'{column}:Q', format=',.0f'),
-                          alt.Tooltip('비중:Q', format='.1%')]))
-    st.altair_chart(_base(chart, height), width='stretch')
+    theta = alt.Theta(f'{column}:Q', stack=True)
+    color = alt.Color('매체:N',
+                      scale=alt.Scale(range=SERIES),
+                      # 범례를 우측에 두면 좁은 칼럼에서 도넛과 겹쳐 라벨이
+                      # 잘리고, 2열로 접으면 둘째 열이 칼럼 밖으로 밀린다.
+                      # 아래 1열이 어떤 폭에서도 안전하다.
+                      legend=alt.Legend(title=None, orient='bottom',
+                                        columns=1, labelLimit=180,
+                                        symbolType='circle'))
+    tooltip = ['매체:N', alt.Tooltip(f'{column}:Q', format=',.0f'),
+               alt.Tooltip('비중:Q', format='.1%')]
+
+    # cornerRadius 를 stroke 와 같이 쓰면 두 조각이 만나는 자리마다 흰
+    # 테두리가 둥글게 겹쳐 그려져, 두 조각이 비슷한 크기일 때 도넛 위쪽이
+    # 실제로 이빨 빠진 것처럼 '잘려' 보인다 — 실측 재현. 모서리를 세우고
+    # (cornerRadius 제거) 테두리를 얇게 줄이면 이 흰 틈이 사라진다.
+    arc = (alt.Chart(data)
+           .mark_arc(innerRadius=64, outerRadius=118,
+                     stroke='#FFFFFF', strokeWidth=1)
+           .encode(theta=theta, color=color, tooltip=tooltip))
+
+    # 조각마다 비중을 표기한다. 너무 얇은 조각(5% 미만)은 숫자끼리 겹치므로
+    # 글자를 비워 둔다 — 툴팁으로는 여전히 확인된다. 행을 걸러내지 않고
+    # 텍스트만 비우는 이유: arc 층과 행 수·순서가 같아야 누적각(theta)이
+    # 서로 어긋나지 않는다(라벨이 다른 조각 위에 얹히는 사고를 막는다).
+    label_text = data['비중'].map(lambda v: f'{v:.0%}' if v >= 0.05 else '')
+    label = (alt.Chart(data.assign(라벨=label_text))
+             .mark_text(radius=91, fontSize=12, fontWeight='bold',
+                        color='#FFFFFF')
+             .encode(theta=theta, text='라벨:N'))
+
+    st.altair_chart(_base(arc + label, height), width='stretch')
 
 
-def plan_vs_actual_bar(df: pd.DataFrame, metric: str = '노출',
-                       height: int = 320) -> None:
+def media_metric_bar(df: pd.DataFrame, metric: str = '노출',
+                     height: int = 320) -> None:
     """
-    매체별 계획 vs 실집행 그룹 막대 — **성과 지표만** 비교한다.
+    매체별 단일 지표 막대 — 고른 지표를 매체끼리 비교한다.
 
-    매체비(예산) 비교는 뺐다. 계획 예산은 제안 시점 값이라 부킹 뒤 실제와
-    다르고, 그 차이를 '증감'처럼 보여 주면 사실과 어긋난 해석을 만든다.
+    예전에는 '계획 vs 실집행'을 나란히 그렸는데, 캠페인 시작부터 '매체
+    집행 계획'이란 게 정량값으로 존재하지 않는다 (미디어믹스 예상치는
+    제안 시점 값이라 부킹 뒤 실집행과 비교할 근거가 못 된다). 계획축을
+    걷어내고, 매체 간 실적 비교 하나로 단순화했다 — PPTX 쪽도 이미 같은
+    이유로 계획 대비 비교가 없다(`utils/report/blocks.py`).
     """
-    if metric not in _COMPARABLE_METRICS:
-        T.note(f'{metric}은(는) 계획 대비 비교 대상이 아니에요.', 'info')
+    unit = METRIC_UNITS.get(metric)
+    if unit is None:
+        T.note(f"'{metric}'는 아직 데이터를 못 읽어 와요 — 원본 문서의 "
+               f"컬럼 표기를 확인한 뒤 붙일게요.", 'info')
         return
-    plan_col, act_col = f'계획{metric}', f'실집행{metric}'
-    if plan_col not in df.columns or act_col not in df.columns or df.empty:
-        T.note('비교할 계획·실적 데이터가 없어요.', 'warn')
+    if metric not in df.columns or df.empty:
+        T.note('비교할 매체 데이터가 없어요.', 'warn')
         return
 
-    long = df.melt(id_vars='매체', value_vars=[plan_col, act_col],
-                   var_name='구분', value_name='값')
-    long = long[long['값'] > 0]
-    if long.empty:
+    data = df[df[metric] > 0][['매체', metric]]
+    if data.empty:
         T.note(f'{metric} 기준으로 비교할 값이 없어요.', 'warn')
         return
 
-    # 계획은 조용한 그레이, 실집행만 브랜드 블루 — 눈이 실적으로 먼저 간다.
-    chart = (alt.Chart(long)
-             .mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6)
+    fmt = {'count': '~s', 'pct': '.1%', 'won': ',.0f'}[unit]
+    chart = (alt.Chart(data)
+             .mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6,
+                       color=T.BRAND)
              .encode(
                  x=alt.X('매체:N', sort='-y', title=None,
                          axis=alt.Axis(labelAngle=-25)),
-                 y=alt.Y('값:Q', title=None,
-                         axis=alt.Axis(format='~s')),
-                 color=alt.Color('구분:N',
-                                 scale=alt.Scale(
-                                     domain=[plan_col, act_col],
-                                     range=[T.GREY_300, T.BRAND]),
-                                 legend=alt.Legend(title=None, orient='top')),
-                 xOffset='구분:N',
-                 tooltip=['매체:N', '구분:N',
-                          alt.Tooltip('값:Q', format=',.0f')]))
+                 y=alt.Y(f'{metric}:Q', title=None,
+                         axis=alt.Axis(format=fmt)),
+                 tooltip=['매체:N', alt.Tooltip(f'{metric}:Q', format=fmt)]))
     st.altair_chart(_base(chart, height), width='stretch')
 
 

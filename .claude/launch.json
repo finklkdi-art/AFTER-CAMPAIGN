@@ -10,6 +10,17 @@
                       "--server.headless=true",
                       "--browser.gatherUsageStats=false"],
       "port": 8501
+    },
+    {
+      "name": "chart-harness",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "streamlit", "run",
+                      "C:\\Users\\CHEIL\\AppData\\Local\\Temp\\claude\\C--Users-CHEIL-Desktop-AX3BB\\2b766d23-6a04-46b2-9f5d-f5298bafdefb\\scratchpad\\chart_harness.py",
+                      "--server.port=8502",
+                      "--server.address=localhost",
+                      "--server.headless=true",
+                      "--browser.gatherUsageStats=false"],
+      "port": 8502
     }
   ]
 }
