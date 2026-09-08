@@ -20,7 +20,7 @@ from typing import List, Optional, Sequence
 
 from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from pptx.enum.text import PP_ALIGN, MSO_ANCHOR, MSO_AUTO_SIZE
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.oxml.ns import qn
 
@@ -103,7 +103,8 @@ def set_run_font(run, face: str, size: float, color: str) -> None:
 
 
 def add_text(slide, x, y, w, h, runs, *, align=PP_ALIGN.LEFT,
-             anchor=MSO_ANCHOR.TOP, wrap=True, line_spacing=None):
+             anchor=MSO_ANCHOR.TOP, wrap=True, line_spacing=None,
+             shrink_to_fit=True):
     """
     텍스트박스 추가. runs = [(text, face, size, color), ...] 또는
     줄바꿈은 [[run,...], [run,...]] (단락 리스트).
@@ -115,6 +116,20 @@ def add_text(slide, x, y, w, h, runs, *, align=PP_ALIGN.LEFT,
     tf.word_wrap = wrap
     tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
     tf.vertical_anchor = anchor
+    if shrink_to_fit:
+        # 텍스트가 박스보다 길면 **넘쳐 흐르지 않고 줄어들게** 한다.
+        #
+        # 이 문서의 모든 박스는 고정 좌표로 놓인다. 기본값(자동 맞춤 없음)
+        # 에서는 긴 문안이 박스 밖으로 그대로 흘러 아래 영역(본문 표·각주)
+        # 위에 겹쳐 찍힌다. 미리보기는 2줄로 잘라 보여 주는데 실제 PPT 는
+        # 겹쳐 나오는, 눈에 띄지 않는 불일치가 생긴다.
+        #
+        # normAutofit 은 **넘칠 때만** 동작한다 — 지금처럼 잘 맞는 문안에는
+        # 아무 영향이 없어서, 기존 슬라이드 모양은 그대로 유지된다.
+        try:
+            tf.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+        except Exception:
+            pass
 
     paragraphs = runs if runs and isinstance(runs[0], list) else [runs]
     for pi, para_runs in enumerate(paragraphs):

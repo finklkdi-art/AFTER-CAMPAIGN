@@ -137,6 +137,11 @@ def _cell(c: Any) -> str:
     return str(c if c is not None else '')
 
 
+# 본문과 각주 사이 최소 간격(inch). 둘이 맞닿으면 표 마지막 줄과 자료원
+# 문구가 붙어 읽혀서, 어디까지가 표인지 눈으로 구분되지 않는다.
+_BODY_FOOT_GAP = 0.14
+
+
 def _table(p: Dict[str, Any], max_rows: int = 6):
     """
     (헤더, 본문행들, 전체 본문 행수) 를 돌려준다.
@@ -237,6 +242,7 @@ def slide_html(slide, campaign_tag: str = '', *,
             parts.append(
                 f'<div class="sp-key" style="left:{px(s.x(TH.KEY_POS[0]))};'
                 f'top:{px(s.y(TH.KEY_POS[1]))};width:{px(s.x(TH.KEY_POS[2]))};'
+                f'height:{px(s.y(TH.KEY_POS[3]))};'
                 f'font-size:{px(s.pt(17, 11))}">{_esc(headline)}</div>')
 
     # 본문 영역 — 표가 있으면 표, 없으면 불릿
@@ -244,6 +250,14 @@ def slide_html(slide, campaign_tag: str = '', *,
         cy = px(s.y(TH.CONTENT_Y))
         cx = px(s.x(0.63))
         cw = px(s.x(12.06))
+        # 🔴 본문에 높이를 준다.
+        #
+        # 예전에는 높이가 없어서, 행이 많은 표가 아래로 계속 자라 **각주
+        # 영역을 덮었다**(사용자 제보 스크린샷). 절대 좌표 배치에서는 높이를
+        # 주지 않으면 다음 영역을 침범하는 게 기본 동작이다.
+        # 각주 바로 위까지로 잘라 두면 넘치는 부분은 overflow:hidden 이
+        # 깔끔하게 잘라 내고, '외 N행' 표기가 이미 생략 사실을 알려 준다.
+        ch = px(s.y(TH.FOOT_Y - TH.CONTENT_Y - _BODY_FOOT_GAP))
         if head or body_rows:
             th = ''.join(f'<th>{_esc(c)}</th>' for c in head)
             tb = ''.join(
@@ -254,19 +268,19 @@ def slide_html(slide, campaign_tag: str = '', *,
                     if total_rows > len(body_rows) else '')
             parts.append(
                 f'<div class="sp-body" style="left:{cx};top:{cy};width:{cw};'
-                f'font-size:{px(s.pt(8, 7))}">'
+                f'height:{ch};font-size:{px(s.pt(8, 7))}">'
                 f'<table class="sp-tbl"><thead><tr>{th}</tr></thead>'
                 f'<tbody>{tb}</tbody></table>{more}</div>')
         elif bullets:
             lis = ''.join(f'<li>{_esc(b)}</li>' for b in bullets)
             parts.append(
                 f'<div class="sp-body" style="left:{cx};top:{cy};width:{cw};'
-                f'font-size:{px(s.pt(10.5, 8.5))}">'
+                f'height:{ch};font-size:{px(s.pt(10.5, 8.5))}">'
                 f'<ul class="sp-ul">{lis}</ul></div>')
         else:
             parts.append(
                 f'<div class="sp-body sp-empty" style="left:{cx};top:{cy};'
-                f'width:{cw};font-size:{px(s.pt(10, 8.5))}">'
+                f'width:{cw};height:{ch};font-size:{px(s.pt(10, 8.5))}">'
                 f'도표·차트 슬라이드</div>')
 
     # 출처 푸터
@@ -274,6 +288,7 @@ def slide_html(slide, campaign_tag: str = '', *,
         parts.append(
             f'<div class="sp-foot" style="left:{px(s.x(0.63))};'
             f'top:{px(s.y(TH.FOOT_Y))};width:{px(s.x(12.06))};'
+            f'height:{px(s.y(TH.SLIDE_H - TH.FOOT_Y - 0.06))};'
             f'font-size:{px(s.pt(7, 6.5))}">{_esc(src)}</div>')
 
     if index is not None:
@@ -308,20 +323,28 @@ def slide_css() -> str:
              -webkit-box-orient: vertical; overflow: hidden; }}
   .sp-hero {{ color: #{TH.INK}; font-weight: 700; letter-spacing: -.03em;
              text-align: center; word-break: keep-all; }}
+  /* 영역마다 높이가 주어지므로, 넘치는 내용은 다음 영역을 밀지 않고 잘린다.
+     절대 좌표 배치에서 overflow 를 열어 두면 그게 곧 영역 침범이 된다. */
   .sp-body {{ color: #{TH.INK}; overflow: hidden; }}
+  .sp-key  {{ overflow: hidden; }}
+  .sp-foot {{ overflow: hidden; }}
   .sp-ul   {{ margin: 0; padding-left: 1.1em; }}
   .sp-ul li {{ margin-bottom: .45em; word-break: keep-all;
               overflow-wrap: anywhere; }}
   .sp-empty {{ color: #{TH.MUTED}; font-style: normal; }}
+  /* 작은 글자에서 행이 서로 붙어 읽히던 문제 — 줄간을 표에서만 되잡는다.
+     카드 전체 line-height(1.35)를 그대로 쓰면 7~8px 글자에서 행 높이가
+     12px 남짓이라 위아래 글자가 맞닿아 보인다. */
   .sp-tbl  {{ width: 100%; border-collapse: collapse;
-             font-size: inherit; table-layout: fixed; }}
+             font-size: inherit; table-layout: fixed; line-height: 1.5; }}
   .sp-tbl th {{ background: #{TH.TBL_HEAD}; color: #{TH.INK};
-               font-weight: 700; padding: .35em .5em; text-align: left;
-               border: 1px solid #{TH.LINE_CARD}; white-space: nowrap; }}
-  .sp-tbl td {{ padding: .32em .5em; border: 1px solid #{TH.LINE_CARD};
+               font-weight: 700; padding: .45em .55em; text-align: left;
+               border: 1px solid #{TH.LINE_CARD}; white-space: nowrap;
+               overflow: hidden; text-overflow: ellipsis; }}
+  .sp-tbl td {{ padding: .42em .55em; border: 1px solid #{TH.LINE_CARD};
                white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
                max-width: 9em; }}
-  .sp-more {{ color: #{TH.MUTED}; margin-top: .4em; }}
+  .sp-more {{ color: #{TH.MUTED}; margin-top: .5em; }}
   .sp-foot {{ color: #{TH.FOOT}; word-break: keep-all; white-space: nowrap;
              overflow: hidden; text-overflow: ellipsis; }}
   .sp-no   {{ position: absolute; right: 6px; bottom: 5px;
