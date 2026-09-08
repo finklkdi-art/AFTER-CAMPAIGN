@@ -1602,25 +1602,70 @@ class ReportSpecBuilder:
     @staticmethod
     def _daily_trend(knowledge: CampaignKnowledge,
                      dataset: CampaignDataset) -> Optional[SlideSpec]:
-        """Scheduling — 일자별 집행 추이 + 운영 이벤트"""
+        """
+        Scheduling — 일자별 집행 추이 + 운영 이벤트
+
+        그리는 구간은 데일리리포트 행 수가 아니라 **문서가 말하는 집행 기간**
+        이다(`dataset.campaign_period()`). 행을 그대로 쓰면 캠페인이 끝난 뒤의
+        빈 행까지 기간에 들어가, 미디어믹스가 6/29~7/28 인 캠페인이 '55일 ·
+        8/22 까지' 로 찍힌다. 잘라낸 행은 각주와 Checklist 에 남긴다
+        (claude.md 3.1 — 조용한 소실 금지).
+        """
         dr = dataset.daily_report
         if not dr or len(dr.daily_rows) < 5:
             return None
-        rows = dr.daily_rows
+
+        rows = list(dr.daily_rows)
         use_spend = any(r.metrics.spend for r in rows)
-        values = [(r.metrics.spend if use_spend else r.metrics.impressions) or 0
-                  for r in rows]
-        cats = [r.date[5:].replace('-', '/') for r in rows]     # MM/DD
+
+        def val(r) -> float:
+            return (r.metrics.spend if use_spend else r.metrics.impressions) or 0
+
+        period = dataset.campaign_period()
+        kept = [r for r in rows if period is None or period.contains(r.date)]
+        # 기간 밖으로 판정돼 한 행도 안 남으면 기간 쪽을 의심한다. 원본을 살린다.
+        if len(kept) < 5:
+            kept, period = rows, None
+
+        # 집행이 없는 앞뒤 꼬리는 '집행 기간'이 아니다. 가운데 0 은 사실이므로 둔다.
+        while kept and not val(kept[0]):
+            kept.pop(0)
+        while kept and not val(kept[-1]):
+            kept.pop()
+        if len(kept) < 5:
+            kept = rows
+
+        # 값이 같은 행이 있어도 헷갈리지 않게 동일성으로 뺀다
+        kept_ids = {id(r) for r in kept}
+        dropped = [r.date for r in rows if id(r) not in kept_ids]
+        notes = [f'자료원: {dr.source_file} <일자별 통합> 시트']
+        if dropped:
+            notes.append(f'집행 기간 {kept[0].date[5:]}~{kept[-1].date[5:]} '
+                         f'기준 · 기간 밖 {len(dropped)}일 제외')
+            knowledge.add_checklist_item(ChecklistItem(
+                type='daily_trend_period',
+                severity='warning',
+                message=(f'일자별 추이에서 집행 기간 밖 {len(dropped)}일을 '
+                         f'제외했어요 — 기간이 맞는지 확인해 주세요.'),
+                detail=(f'그린 구간 {kept[0].date}~{kept[-1].date} · '
+                        f'제외 {dropped[0]}~{dropped[-1]} ({len(dropped)}일)'
+                        + (f' · 기간 출처 {period.source_label}' if period else '')
+                        + (f' · {period.note}' if period and period.note else '')),
+                source='Stage 2 일자별 추이',
+            ))
+        if period and period.confidence == 'low':
+            notes.append('미디어믹스와 포스트바이의 기간이 달라요 — Checklist 참조')
+
         events = [{'date': e.date[5:].replace('-', '/'), 'note': e.note}
-                  for e in dr.events][:8]
+                  for e in dr.events if period is None or period.contains(e.date)]
         return SlideSpec('daily_trend', {
             'section': 'Scheduling — 일자별 집행 추이',
             'metric_name': '집행 금액' if use_spend else '노출수',
-            'categories': cats,
-            'values': values,
-            'events': events,
-            'event_total': len(dr.events),
-            'sources': [f'자료원: {dr.source_file} <일자별 통합> 시트'],
+            'categories': [r.date[5:].replace('-', '/') for r in kept],   # MM/DD
+            'values': [val(r) for r in kept],
+            'events': events[:8],
+            'event_total': len(events),
+            'sources': notes[:3],
         })
 
     @staticmethod

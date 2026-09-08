@@ -7,7 +7,7 @@ Stage 2 블록 데이터 계약
 """
 
 from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 
 
 # ===================== 공통 =====================
@@ -405,6 +405,59 @@ class DataGap:
 
 # ===================== 통합 =====================
 
+def _daykey(day: str) -> int:
+    """'MM-DD' 또는 'YYYY-MM-DD' → 정렬키 (roadmap 쪽과 같은 규칙)"""
+    mm, dd = day[-5:].split('-')
+    return int(mm) * 31 + int(dd)
+
+
+@dataclass
+class CampaignPeriod:
+    """
+    캠페인 집행 기간 — 문서마다 다르게 말하는 값이라 출처를 달고 다닌다.
+
+    이 값이 필요한 이유: 데일리리포트 파일은 캠페인이 끝난 뒤에도 행이
+    이어지는 경우가 있다(0 으로 채운 꼬리, 다른 Phase, 다음 캠페인). 행 수를
+    그대로 '캠페인 기간'으로 쓰면 실제보다 긴 기간이 보고서에 찍힌다 —
+    미디어믹스가 6/29~7/28 인데 그래프가 8/22 까지 그려지던 사고가 그것이다.
+
+    표기는 'MM-DD'. 계획 라인(PlanLine.period_start/end)이 이미 그 형식이고
+    데일리리포트 행은 'YYYY-MM-DD' 라 뒤 5자로 맞춘다.
+
+    출처
+      계획축   미디어믹스 — 계획 라인의 최소~최대, 없으면 period_raw
+      실집행축 포스트바이 — period_raw
+
+    두 축이 어긋나면 하나를 고르지 않고 **합집합**을 쓴다. 좁게 잡으면 실제
+    집행한 날이 그래프에서 사라지는데, 그건 조용한 소실이다 (claude.md 3.1).
+    어긋난 사실 자체는 note 에 남겨 Checklist 로 올린다 (claude.md 3.2).
+    """
+    start: str = ""
+    end: str = ""
+    source_label: str = ""
+    verified_start: str = ""
+    verified_end: str = ""
+    verified_source: str = ""
+    confidence: str = "none"          # high | medium | low | none
+    note: str = ""
+
+    def is_verified(self) -> bool:
+        """계획축과 실집행축이 서로를 확인해 주는가."""
+        return self.confidence == 'high'
+
+    def contains(self, day: str) -> bool:
+        """'YYYY-MM-DD' / 'MM-DD' 가 기간 안에 드는가."""
+        if not (self.start and self.end and day):
+            return True                # 기간을 모르면 아무것도 잘라내지 않는다
+        try:
+            return _daykey(self.start) <= _daykey(day) <= _daykey(self.end)
+        except (ValueError, IndexError):
+            return True
+
+    def label(self) -> str:
+        return f'{self.start} ~ {self.end}' if self.start and self.end else '-'
+
+
 @dataclass
 class CampaignDataset:
     """
@@ -424,6 +477,9 @@ class CampaignDataset:
     # Part 1 Overview 의 원천 — 제안서가 없으면 빈 객체가 그대로 들어온다
     intent: CampaignIntent = field(default_factory=CampaignIntent)
 
+    # 계획축과 실집행축이 이만큼까지 어긋나는 건 표기 차이로 본다 (일).
+    PERIOD_TOLERANCE_DAYS: ClassVar[int] = 3
+
     # ---------- 조회 ----------
 
     def media_spend(self) -> Optional['MediaSpend']:
@@ -441,6 +497,72 @@ class CampaignDataset:
         dr = self.daily_report
         spend = getattr(dr, 'media_spend', None) if dr else None
         return spend if (spend and spend.total) else None
+
+    def campaign_period(self) -> Optional['CampaignPeriod']:
+        """
+        집행 기간 — 화면과 보고서가 함께 쓰는 **단일 출처**.
+
+        미디어믹스(계획축)와 포스트바이(실집행축)를 교차 검증한다. 어느 쪽도
+        기간을 말하지 않으면 None — 데일리리포트 행 수로 기간을 추정하지
+        않는다. 그 추정이 바로 고치려는 버그다 (claude.md 3.3).
+        """
+        from utils.parsers.sheet_utils import split_period
+
+        def ordered(s: Optional[str], e: Optional[str]):
+            """해석 못 했거나 해가 넘어가는 구간은 쓰지 않는다."""
+            if not (s and e):
+                return None
+            try:
+                return (s, e) if _daykey(s) <= _daykey(e) else None
+            except (ValueError, IndexError):
+                return None
+
+        mm = self.media_mix
+        plan = plan_src = None
+        if mm:
+            starts = [l.period_start for l in mm.lines if l.period_start]
+            ends = [l.period_end for l in mm.lines if l.period_end]
+            if starts and ends:
+                plan = ordered(min(starts, key=_daykey), max(ends, key=_daykey))
+                plan_src = f'{mm.source_file} 계획 라인'
+            if plan is None and mm.period_raw:
+                plan = ordered(*split_period(mm.period_raw))
+                plan_src = f'{mm.source_file} 기간 표기'
+
+        pb = self.postbuy
+        actual = actual_src = None
+        if pb and pb.period_raw:
+            actual = ordered(*split_period(pb.period_raw))
+            actual_src = f'{getattr(pb, "source_file", "포스트바이")} 기간 표기'
+
+        if plan is None and actual is None:
+            return None
+        if plan is None:
+            return CampaignPeriod(
+                start=actual[0], end=actual[1], source_label=actual_src or '',
+                confidence='medium',
+                note='포스트바이 기간만 확인 — 미디어믹스와 대조하지 못했어요.')
+        if actual is None:
+            return CampaignPeriod(
+                start=plan[0], end=plan[1], source_label=plan_src or '',
+                confidence='medium',
+                note='미디어믹스 기간만 확인 — 포스트바이와 대조하지 못했어요.')
+
+        # 양쪽이 다 있으면 합집합을 쓰되, 얼마나 벌어졌는지를 기록한다.
+        gap = max(abs(_daykey(plan[0]) - _daykey(actual[0])),
+                  abs(_daykey(plan[1]) - _daykey(actual[1])))
+        agree = gap <= self.PERIOD_TOLERANCE_DAYS
+        return CampaignPeriod(
+            start=min(plan[0], actual[0], key=_daykey),
+            end=max(plan[1], actual[1], key=_daykey),
+            source_label=plan_src or '',
+            verified_start=actual[0], verified_end=actual[1],
+            verified_source=actual_src or '',
+            confidence='high' if agree else 'low',
+            note='' if agree else
+                 (f'미디어믹스 {plan[0]}~{plan[1]} · '
+                  f'포스트바이 {actual[0]}~{actual[1]} 로 기간이 달라 '
+                  f'둘을 합친 구간을 썼어요.'))
 
     def gap(self, key: str) -> Optional[DataGap]:
         for g in self.gaps:
