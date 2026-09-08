@@ -597,11 +597,28 @@ _BASE_CSS = """
   div[data-baseweb="tab-highlight"] { background-color: var(--ax-brand); height: 2px; }
   div[data-baseweb="tab-border"] { background-color: var(--ax-line); }
 
+  /* ── 차트 ──
+     Altair 는 렌더 시점 폭으로 svg 를 굳혀 낸다. 칼럼이 그보다 좁아지면
+     차트가 옆 칸 위로 삐져나온다(900px 폭에서 실측 72.8px 초과).
+     차트는 데이터가 촘촘해 억지로 줄이면 못 읽으므로, 넘칠 때는 겹치는 대신
+     그 안에서 가로로 스크롤되게 가둔다. */
+  [data-testid="stVegaLiteChart"], .stVegaLiteChart {
+      max-width: 100%; overflow-x: auto; }
+  [data-testid="stVegaLiteChart"] > div { max-width: 100%; }
+
   /* ── 데이터프레임 · 코드 ── */
   [data-testid="stDataFrame"] { border: var(--ax-bd); border-radius: var(--ax-r-l);
       overflow: hidden; box-shadow: var(--ax-sh-1); }
+  /* 코드 블록은 줄을 감싼다.
+     '전송되는 내용' 안내(step3_preview)는 파일명·문안이 길게 이어지는데,
+     기본값(줄바꿈 없음)이면 좁은 칼럼에서 608px 짜리 한 줄이 되어 옆 영역
+     위로 삐져나갔다(실측 295px 초과). 가로 스크롤보다 줄바꿈이 읽기 좋다. */
   .stCode, pre { background: var(--ax-surface-2) !important; border: var(--ax-bd);
-      border-radius: var(--ax-r-m); font-size: .875rem !important; }
+      border-radius: var(--ax-r-m); font-size: .875rem !important;
+      overflow-x: auto; max-width: 100%; }
+  .stCode code, pre code, .stCode div, pre div {
+      white-space: pre-wrap !important; overflow-wrap: anywhere !important;
+      word-break: break-word !important; }
 
   /* ── 다이얼로그 ── */
   div[data-testid="stDialog"] div[role="dialog"] {
@@ -614,21 +631,19 @@ _BASE_CSS = """
       display: none !important; }
 
   /* ══════════ 슬라이드 썸네일 ══════════
-     슬라이드 카드(.sp-slide)는 내부가 전부 절대좌표 px 이라 폭만 줄이면
-     내용이 삐져나온다. 화면이 좁아지면 카드째 축소해 비율을 지킨다.
-     `overflow:hidden` 은 zoom 을 모르는 브라우저에서도 옆 칸을 침범하지
-     않게 막는 안전장치다 (태블릿 폭에서 실제로 잘려 나갔다). */
+     카드는 내부 좌표가 전부 %/cqw 라 담긴 칼럼 폭을 그대로 따라간다
+     (slide_preview._Scale). 여기서는 넘칠 여지를 한 번 더 막아 두기만 한다 —
+     고정 px 카드가 옆 칸을 덮던 사고가 두 번 났던 자리다. */
   .ax-thumb { padding: 10px; border-radius: var(--ax-r-l);
       border: 1px solid transparent; background: transparent;
       overflow: hidden;
       transition: background var(--ax-dur-fast) var(--ax-ease),
                   border-color var(--ax-dur-fast) var(--ax-ease),
                   box-shadow var(--ax-dur-fast) var(--ax-ease); }
+  /* zoom 단계 보정은 걷어냈다 — 카드가 이제 스스로 칼럼 폭을 따라가므로
+     (slide_preview: width 100% + aspect-ratio + cqw) 겹쳐 쓰면 두 번 줄어든다.
+     뷰포트가 아니라 '담긴 칼럼'에 반응하는 게 맞다. */
   .ax-thumb .sp-slide { max-width: 100%; }
-  @media (max-width: 1100px) { .ax-thumb .sp-slide { zoom: .84; } }
-  @media (max-width: 900px)  { .ax-thumb .sp-slide { zoom: .70; } }
-  @media (max-width: 760px)  { .ax-thumb .sp-slide { zoom: .60; } }
-  @media (max-width: 640px)  { .ax-thumb .sp-slide { zoom: 1; } }
   .ax-thumb:hover { background: var(--ax-surface); box-shadow: var(--ax-sh-1); }
   .ax-thumb.on { border-color: var(--ax-brand-100); background: var(--ax-surface);
       box-shadow: var(--ax-sh-2); }

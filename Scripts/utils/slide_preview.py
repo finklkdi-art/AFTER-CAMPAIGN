@@ -46,29 +46,44 @@ def _esc(s: Any) -> str:
 
 
 class _Scale:
-    """인치 좌표 → 픽셀 변환기. 폭 하나로 전체 배율이 정해진다."""
+    """
+    인치 좌표 → **상대 단위** 변환기.
+
+    🔴 예전에는 인치를 px 로 굳혀 넣었다. 카드가 `width:560px` 로 고정되니,
+       Streamlit 칼럼이 그보다 좁아지는 순간(브라우저 폭 1030 근처) 카드가
+       오른쪽 '문안 수정' 패널 위로 삐져나왔다. 고정 px 를 유동 칼럼에 넣으면
+       겹치는 건 예외가 아니라 정상 동작이다.
+
+       이제 좌표는 **카드 대비 %**, 글자는 **cqw(카드 폭의 1%)** 로 낸다.
+       카드는 `width:100%` + `aspect-ratio` 로 칼럼을 따라 줄었다 늘었다 하고,
+       내부는 항상 같은 비율을 유지한다. 어떤 폭에서도 넘칠 수가 없다.
+    """
 
     def __init__(self, width_px: int):
-        self.w = width_px
+        self.w = width_px                    # 이제 '최대 폭' 힌트로만 쓴다
         self.h = round(width_px * ASPECT)
         self.ppi = width_px / SLIDE_W_IN
 
-    def x(self, inches: float) -> float:
-        return round(inches * self.ppi, 2)
+    def fx(self, inches: float) -> str:
+        """가로 좌표·폭 — 카드 폭 대비 %"""
+        return f'{round(inches / SLIDE_W_IN * 100, 3)}%'
 
-    y = x                                    # 등방 배율이라 축이 같다
+    def fy(self, inches: float) -> str:
+        """세로 좌표·높이 — 카드 높이 대비 %"""
+        return f'{round(inches / SLIDE_H_IN * 100, 3)}%'
 
-    def pt(self, points: float, floor: float = 0) -> float:
+    def ff(self, points: float, floor: float = 0) -> str:
         """
-        포인트(1/72 in) → px. `floor` 아래로는 내려가지 않는다.
+        글자 크기 — 카드 폭에 비례(cqw)하되 가독 하한(px)을 지킨다.
 
-        배율을 그대로 따르면 320px 썸네일에서 본문 10.5pt 가 3.5px 가 되어
-        글자가 아니라 얼룩이 된다. 위치·비율은 산출물과 맞추되 **글자 크기만
-        가독 하한을 둔다.** 그 결과 작은 카드에서는 텍스트가 실제 덱보다
-        상대적으로 커 보이지만, 슬라이드를 알아보고 고를 수 있어야 한다는
-        미리보기의 목적에는 이쪽이 맞다.
+        비율만 따르면 300px 썸네일에서 본문 10.5pt 가 3.5px 가 되어 글자가
+        아니라 얼룩이 된다. `max()` 로 하한을 걸어 두면, 큰 카드에서는 실제
+        덱과 같은 비율로 커지고 작은 카드에서만 하한이 작동한다.
         """
-        return max(round(points / 72 * self.ppi, 2), floor)
+        cqw = round(points / 72 / SLIDE_W_IN * 100, 4)
+        if floor:
+            return f'max({floor}px, {cqw}cqw)'
+        return f'{cqw}cqw'
 
 
 # ─────────────────────────── 페이로드 해석
@@ -206,9 +221,10 @@ def slide_html(slide, campaign_tag: str = '', *,
     # 표지·간지는 본문 대신 제목을 크게 — 산출물의 위계를 따른다
     hero = kind in ('cover', 'divider', 'eod')
 
-    px = lambda v: f'{v}px'                                   # noqa: E731
+    # 카드는 칼럼 폭을 따라간다. `max-width` 는 '이보다 크게는 만들지 말라'는
+    # 상한일 뿐이고, 칼럼이 좁아지면 그만큼 줄어든다 — 넘칠 여지가 없다.
     parts: List[str] = [
-        f'<div class="sp-slide" style="width:{px(s.w)};height:{px(s.h)}">'
+        f'<div class="sp-slide" style="max-width:{s.w}px">'
     ]
 
     # L3a 캠페인 태그 — 작은 카드에서는 생략한다.
@@ -216,40 +232,40 @@ def slide_html(slide, campaign_tag: str = '', *,
     # 붙어 읽히고, 모든 장에 같은 값이 반복돼 정보량도 없다.
     if campaign_tag and not hero and width >= 500:
         parts.append(
-            f'<div class="sp-tag" style="left:{px(s.x(TH.TAG_POS[0]))};'
-            f'top:{px(s.y(TH.TAG_POS[1]))};font-size:{px(s.pt(9, 7))}">'
+            f'<div class="sp-tag" style="left:{s.fx(TH.TAG_POS[0])};'
+            f'top:{s.fy(TH.TAG_POS[1])};font-size:{s.ff(9, 7)}">'
             f'{_esc(campaign_tag)}</div>')
 
     # L3b 섹션 라벨 + ■ 액센트
     if section and not hero:
         parts.append(
-            f'<div class="sp-sq" style="left:{px(s.x(TH.SEC_SQ[0]))};'
-            f'top:{px(s.y(TH.SEC_SQ[1]))};width:{px(s.x(TH.SEC_SQ[2]))};'
-            f'height:{px(s.y(TH.SEC_SQ[3]))}"></div>')
+            f'<div class="sp-sq" style="left:{s.fx(TH.SEC_SQ[0])};'
+            f'top:{s.fy(TH.SEC_SQ[1])};width:{s.fx(TH.SEC_SQ[2])};'
+            f'height:{s.fy(TH.SEC_SQ[3])}"></div>')
         parts.append(
-            f'<div class="sp-sec" style="left:{px(s.x(TH.SEC_POS[0]))};'
-            f'top:{px(s.y(TH.SEC_POS[1]))};font-size:{px(s.pt(11, 8.5))}">'
+            f'<div class="sp-sec" style="left:{s.fx(TH.SEC_POS[0])};'
+            f'top:{s.fy(TH.SEC_POS[1])};font-size:{s.ff(11, 8.5)}">'
             f'{_esc(section)}</div>')
 
     # L4 키메시지
     if headline:
         if hero:
             parts.append(
-                f'<div class="sp-hero" style="left:{px(s.x(1.0))};'
-                f'top:{px(s.y(2.9))};width:{px(s.x(11.3))};'
-                f'font-size:{px(s.pt(30, 15))}">{_esc(headline)}</div>')
+                f'<div class="sp-hero" style="left:{s.fx(1.0)};'
+                f'top:{s.fy(2.9)};width:{s.fx(11.3)};'
+                f'font-size:{s.ff(30, 15)}">{_esc(headline)}</div>')
         else:
             parts.append(
-                f'<div class="sp-key" style="left:{px(s.x(TH.KEY_POS[0]))};'
-                f'top:{px(s.y(TH.KEY_POS[1]))};width:{px(s.x(TH.KEY_POS[2]))};'
-                f'height:{px(s.y(TH.KEY_POS[3]))};'
-                f'font-size:{px(s.pt(17, 11))}">{_esc(headline)}</div>')
+                f'<div class="sp-key" style="left:{s.fx(TH.KEY_POS[0])};'
+                f'top:{s.fy(TH.KEY_POS[1])};width:{s.fx(TH.KEY_POS[2])};'
+                f'height:{s.fy(TH.KEY_POS[3])};'
+                f'font-size:{s.ff(17, 11)}">{_esc(headline)}</div>')
 
     # 본문 영역 — 표가 있으면 표, 없으면 불릿
     if not hero:
-        cy = px(s.y(TH.CONTENT_Y))
-        cx = px(s.x(0.63))
-        cw = px(s.x(12.06))
+        cy = s.fy(TH.CONTENT_Y)
+        cx = s.fx(0.63)
+        cw = s.fx(12.06)
         # 🔴 본문에 높이를 준다.
         #
         # 예전에는 높이가 없어서, 행이 많은 표가 아래로 계속 자라 **각주
@@ -257,7 +273,7 @@ def slide_html(slide, campaign_tag: str = '', *,
         # 주지 않으면 다음 영역을 침범하는 게 기본 동작이다.
         # 각주 바로 위까지로 잘라 두면 넘치는 부분은 overflow:hidden 이
         # 깔끔하게 잘라 내고, '외 N행' 표기가 이미 생략 사실을 알려 준다.
-        ch = px(s.y(TH.FOOT_Y - TH.CONTENT_Y - _BODY_FOOT_GAP))
+        ch = s.fy(TH.FOOT_Y - TH.CONTENT_Y - _BODY_FOOT_GAP)
         if head or body_rows:
             th = ''.join(f'<th>{_esc(c)}</th>' for c in head)
             tb = ''.join(
@@ -268,28 +284,28 @@ def slide_html(slide, campaign_tag: str = '', *,
                     if total_rows > len(body_rows) else '')
             parts.append(
                 f'<div class="sp-body" style="left:{cx};top:{cy};width:{cw};'
-                f'height:{ch};font-size:{px(s.pt(8, 7))}">'
+                f'height:{ch};font-size:{s.ff(8, 7)}">'
                 f'<table class="sp-tbl"><thead><tr>{th}</tr></thead>'
                 f'<tbody>{tb}</tbody></table>{more}</div>')
         elif bullets:
             lis = ''.join(f'<li>{_esc(b)}</li>' for b in bullets)
             parts.append(
                 f'<div class="sp-body" style="left:{cx};top:{cy};width:{cw};'
-                f'height:{ch};font-size:{px(s.pt(10.5, 8.5))}">'
+                f'height:{ch};font-size:{s.ff(10.5, 8.5)}">'
                 f'<ul class="sp-ul">{lis}</ul></div>')
         else:
             parts.append(
                 f'<div class="sp-body sp-empty" style="left:{cx};top:{cy};'
-                f'width:{cw};height:{ch};font-size:{px(s.pt(10, 8.5))}">'
+                f'width:{cw};height:{ch};font-size:{s.ff(10, 8.5)}">'
                 f'도표·차트 슬라이드</div>')
 
     # 출처 푸터
     if src and not hero:
         parts.append(
-            f'<div class="sp-foot" style="left:{px(s.x(0.63))};'
-            f'top:{px(s.y(TH.FOOT_Y))};width:{px(s.x(12.06))};'
-            f'height:{px(s.y(TH.SLIDE_H - TH.FOOT_Y - 0.06))};'
-            f'font-size:{px(s.pt(7, 6.5))}">{_esc(src)}</div>')
+            f'<div class="sp-foot" style="left:{s.fx(0.63)};'
+            f'top:{s.fy(TH.FOOT_Y)};width:{s.fx(12.06)};'
+            f'height:{s.fy(TH.SLIDE_H - TH.FOOT_Y - 0.06)};'
+            f'font-size:{s.ff(7, 6.5)}">{_esc(src)}</div>')
 
     if index is not None:
         parts.append(f'<div class="sp-no">{index}</div>')
@@ -306,11 +322,20 @@ def slide_css() -> str:
     삼성 블루가 아니라 **PPT 에 실제로 찍히는 색**이어야 미리보기가 의미가 있다.
     """
     return f"""
+  /* 카드는 담긴 칼럼 폭을 따라간다.
+     · width:100% + aspect-ratio → 칼럼이 좁아지면 카드도 같이 줄어든다.
+       예전의 고정 px 카드는 칼럼보다 넓어지는 순간 옆 패널을 덮었다.
+     · container-type:inline-size → 내부 글자를 cqw(카드 폭의 1%)로 잡아
+       어떤 크기에서도 같은 비율을 유지한다.
+     · flex:0 0 auto 를 쓰지 않는다 — 그게 축소를 막던 원인이다. */
   .sp-slide {{
       position: relative; background: #fff; overflow: hidden;
       border: 1px solid var(--ax-line); border-radius: 6px;
       font-family: "AXHead", "AXSans", "Malgun Gothic", sans-serif;
-      color: #{TH.INK}; line-height: 1.35; flex: 0 0 auto;
+      color: #{TH.INK}; line-height: 1.35;
+      width: 100%; aspect-ratio: {TH.SLIDE_W} / {TH.SLIDE_H};
+      container-type: inline-size;
+      max-width: 100%; box-sizing: border-box;
   }}
   .sp-slide > div {{ position: absolute; }}
   .sp-tag  {{ color: #{TH.BLUE_MAIN}; font-weight: 700; letter-spacing: -.02em; }}

@@ -4,16 +4,23 @@
 
     python Scripts/test_layout_overlap.py
 
-미리보기는 모든 요소를 **절대 좌표**로 얹는다. 이 방식에서 높이를 주지 않으면
-내용이 길어질 때 다음 영역 위로 자라는 게 기본 동작이다. 실제로 행이 많은 표가
-자료원 각주를 덮는 일이 있었다(2026-09-08 제보).
+미리보기 카드는 요소를 **절대 좌표**로 얹는다. 이 방식에서 두 가지가 겹침을
+만들었고, 둘 다 실제로 제보됐다.
 
-그래서 두 가지를 본다.
-  1. 미리보기 HTML 이 실제로 만들어 낸 블록들의 사각형이 겹치지 않는가
-  2. 산출물(PPTX) 레이아웃 상수끼리 애초에 겹치게 정의돼 있지는 않은가
+  ① 높이 없는 블록 — 표가 길어지자 아래 각주 위로 자랐다.
+  ② 고정 px 카드 — `width:560px` 카드가 그보다 좁은 Streamlit 칼럼에 들어가자
+     오른쪽 '문안 수정' 패널을 덮었다.
 
-폭을 하나만 보지 않는다 — 썸네일(300px)과 상세(560px)는 글자 크기 하한
-때문에 비율이 달라서, 한쪽에서만 겹치는 경우가 생긴다.
+②를 고치며 좌표를 전부 **카드 대비 %** 로 바꿨다. 덕분에 이 검사도 강해졌다 —
+비율 좌표는 카드가 어떤 크기든 상대 관계가 같으므로, **한 번만 확인하면 모든
+폭에서 성립한다.** (px 시절엔 폭마다 따로 확인해야 했다.)
+
+함께 보는 것
+  · 위치를 가진 블록에 높이가 있는가 (없으면 = 침범 가능 상태)
+  · 세로로 겹치는 블록 쌍이 있는가
+  · 카드(0~100%) 밖으로 나가는 블록이 있는가
+  · 카드 자체가 담긴 칼럼을 넘지 않게 되어 있는가 (고정 px 폭 금지)
+  · 산출물(PPTX) 좌표 상수끼리 애초에 겹치게 정의돼 있지는 않은가
 """
 
 import re
@@ -27,19 +34,17 @@ from utils import slide_preview as SP            # noqa: E402
 from utils.report import theme as TH             # noqa: E402
 from utils.report.blocks import SlideSpec        # noqa: E402
 
-# 실제로 쓰이는 폭 (썸네일 / 상세)
-WIDTHS = (300, 560)
-
-# 세로로 겹치면 안 되는 블록 쌍 — 같은 x 대역을 공유하는 것들
+# 세로로 겹치면 안 되는 블록 — 같은 x 대역을 위아래로 나눠 쓴다
 _STACK = ('sp-tag', 'sp-sec', 'sp-key', 'sp-body', 'sp-foot')
+# 높이를 반드시 가져야 하는 블록 (내용이 길어질 수 있는 것들)
+_MUST_HAVE_HEIGHT = ('sp-key', 'sp-body', 'sp-foot')
 
-_DIV_RE = re.compile(
-    r'<div class="([^"]+)" style="([^"]*)"', re.S)
-_NUM = re.compile(r'(-?[\d.]+)px')
+_DIV_RE = re.compile(r'<div class="([^"]+)" style="([^"]*)"')
+_PCT = re.compile(r'(-?[\d.]+)%')
 
 
 def _boxes(html: str):
-    """미리보기 HTML → {클래스: (top, height)} (높이가 명시된 것만)"""
+    """미리보기 HTML → {클래스: (top%, height% 또는 None)}"""
     out = {}
     for cls, style in _DIV_RE.findall(html):
         key = next((c for c in _STACK if c in cls.split()), None)
@@ -47,7 +52,7 @@ def _boxes(html: str):
             continue
         top = height = None
         for prop, val in re.findall(r'([a-z-]+)\s*:\s*([^;]+)', style):
-            m = _NUM.search(val)
+            m = _PCT.search(val)
             if not m:
                 continue
             if prop == 'top':
@@ -59,13 +64,13 @@ def _boxes(html: str):
     return out
 
 
-def _make_slide(kind: str, payload: dict) -> SlideSpec:
-    return SlideSpec(kind, payload)
+def _card_style(html: str) -> str:
+    m = re.search(r'<div class="sp-slide" style="([^"]*)"', html)
+    return m.group(1) if m else ''
 
 
-# 본문이 길어지는 최악 케이스들 — 여기서 안 겹치면 실사용에서도 안 겹친다
 CASES = [
-    ('표 20행', _make_slide('media_table', {
+    ('표 20행', SlideSpec('media_table', {
         'section': '매체별 집행 결과',
         'headline_parts': [{'text': 'Digital 9개 매체 집행 결과'}],
         'header': ['매체', '집행 비용(원)', '노출(회)', '조회(회)', '클릭(회)',
@@ -76,23 +81,25 @@ CASES = [
         'sources': ['자료원: 데일리리포트_25년_시스템에어컨캠페인(Phase1,2통합).xlsx '
                     '<일자별 통합> · 매체별 Total'],
     })),
-    ('아주 긴 헤드라인', _make_slide('media_table', {
+    ('아주 긴 헤드라인', SlideSpec('media_table', {
         'section': '매체별 집행 결과',
         'headline_parts': [{'text': '아주 긴 키메시지 ' * 30}],
-        'header': ['매체', '노출'],
-        'rows': [['유튜브', '1,000'], ['메타', '2,000']],
+        'header': ['매체', '노출'], 'rows': [['유튜브', '1,000']],
         'sources': ['자료원: 테스트'],
     })),
-    ('불릿 20줄', _make_slide('lesson', {
+    ('불릿 20줄', SlideSpec('lesson', {
         'section': 'Lesson Learned',
         'bullets': [f'{i}. 매우 긴 제언 문장입니다 ' * 4 for i in range(20)],
         'sources': ['자료원: 포스트바이'],
     })),
-    ('빈 본문', _make_slide('lesson', {
-        'section': '빈 장', 'bullets': [],
-        'sources': ['자료원: 없음'],
+    ('빈 본문', SlideSpec('lesson', {
+        'section': '빈 장', 'bullets': [], 'sources': ['자료원: 없음'],
     })),
+    ('표지(hero)', SlideSpec('cover', {'title': '2025 캠페인 결과 보고'})),
 ]
+
+# 실제 호출부가 쓰는 최대 폭 (썸네일 / 상세)
+WIDTHS = (300, 560)
 
 
 def check_preview() -> list:
@@ -101,40 +108,43 @@ def check_preview() -> list:
         for label, slide in CASES:
             html = SP.slide_html(slide, '2025 테스트 캠페인',
                                  width=width, index=1)
+            tag = f'[{width}px/{label}]'
+
+            # ── 카드가 담긴 칼럼을 넘지 않게 되어 있는가
+            style = _card_style(html)
+            if re.search(r'(?<!max-)width\s*:\s*\d+px', style):
+                problems.append(
+                    f'{tag} 카드에 고정 px 폭이 박혀 있어요 — '
+                    f'좁은 칼럼에서 옆 영역을 덮습니다 ({style})')
+            if 'max-width' not in style:
+                problems.append(f'{tag} 카드에 max-width 상한이 없어요')
+
             boxes = _boxes(html)
 
-            # 1) 높이가 없는 블록 = 다음 영역을 침범할 수 있는 블록
-            for key, (top, height) in boxes.items():
-                if key in ('sp-key', 'sp-body', 'sp-foot') and height is None:
+            # ── 높이 없는 블록 = 다음 영역을 침범할 수 있는 블록
+            for key, (_, height) in boxes.items():
+                if key in _MUST_HAVE_HEIGHT and height is None:
                     problems.append(
-                        f'[{width}px/{label}] {key} 에 높이가 없어 '
-                        f'아래 영역을 침범할 수 있어요')
+                        f'{tag} {key} 에 높이가 없어 아래 영역을 침범할 수 있어요')
 
-            # 2) 실제로 겹치는가
+            # ── 실제로 겹치는가 (비율 좌표라 폭과 무관하게 성립)
             order = [k for k in _STACK if k in boxes]
             for a, b in zip(order, order[1:]):
                 ta, ha = boxes[a]
                 tb, _ = boxes[b]
                 if ha is None:
                     continue
-                if ta + ha > tb + 0.5:          # 0.5px 반올림 여유
+                if ta + ha > tb + 0.01:
                     problems.append(
-                        f'[{width}px/{label}] {a}(끝 {ta + ha:.0f}px) 가 '
-                        f'{b}(시작 {tb:.0f}px) 를 {ta + ha - tb:.0f}px 침범')
+                        f'{tag} {a}(끝 {ta + ha:.2f}%) 가 '
+                        f'{b}(시작 {tb:.2f}%) 를 침범')
 
-            # 3) 카드 밖으로 나가는가
-            card_h = None
-            m = re.search(r'class="sp-slide" style="width:[\d.]+px;'
-                          r'height:([\d.]+)px', html)
-            if m:
-                card_h = float(m.group(1))
-            if card_h:
-                for key, (top, height) in boxes.items():
-                    end = top + (height or 0)
-                    if end > card_h + 0.5:
-                        problems.append(
-                            f'[{width}px/{label}] {key} 가 카드 아래로 '
-                            f'{end - card_h:.0f}px 넘침')
+            # ── 카드 밖으로 나가는가
+            for key, (top, height) in boxes.items():
+                end = top + (height or 0)
+                if end > 100.01:
+                    problems.append(
+                        f'{tag} {key} 가 카드 아래로 {end - 100:.2f}% 넘침')
     return problems
 
 
@@ -164,7 +174,8 @@ def main() -> int:
         for p in problems:
             print('  - ' + p)
         return 1
-    print(f'통과 — 미리보기 {checked}조합 · 산출물 좌표 상수, 영역 침범 없음')
+    print(f'통과 — 미리보기 {checked}조합(비율 좌표라 모든 폭에서 성립) · '
+          f'산출물 좌표 상수, 영역 침범 없음')
     return 0
 
 
