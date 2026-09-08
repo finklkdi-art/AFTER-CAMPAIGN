@@ -26,6 +26,7 @@ from models.campaign_knowledge import CampaignKnowledge
 from models.checklist import ChecklistItem
 from dashboard import state, theme_css as T
 from dashboard import charts
+from dashboard import step3_preview
 
 # 거시 확정 대상 (Rule Book 2.3) — 확인 여부를 Checklist 기재에 쓴다
 MACRO_ITEMS = [
@@ -542,6 +543,7 @@ def render(project_root: Path) -> None:
             if n:
                 state.put(state.KEY_FLASH,
                           f'확인이 필요한 {n}건을 Checklist 에 남겼어요.')
+            step3_preview.arm_scroll_top()
             state.goto_step(3)
             st.rerun()
     with c3:

@@ -637,6 +637,9 @@ _BASE_CSS = """
   .ax-thumb { padding: 10px; border-radius: var(--ax-r-l);
       border: 1px solid transparent; background: transparent;
       overflow: hidden;
+      /* 화면에 들어올 때 첫 장으로 스크롤한다(step3_preview). 여백을 두지
+         않으면 바로 위의 '리포트를 확인해 주세요' 제목이 잘려 나간다. */
+      scroll-margin-top: 120px;
       transition: background var(--ax-dur-fast) var(--ax-ease),
                   border-color var(--ax-dur-fast) var(--ax-ease),
                   box-shadow var(--ax-dur-fast) var(--ax-ease); }

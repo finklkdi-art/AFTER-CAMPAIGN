@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from models.campaign_knowledge import CampaignKnowledge
 from utils import slide_preview as SP
@@ -114,19 +115,62 @@ def _rebuild(block_id: str, label: str) -> None:
 
 
 KEY_DRAWER = 'ax_chat_open'      # 문안 수정 패널이 잡고 있는 block_id
-KEY_SEL = 'ax_sel_slide'         # 썸네일에서 고른 슬라이드 인덱스
+KEY_SEL = 'ax_sel_slide'         # 고른 슬라이드 인덱스 (None = 아직 안 고름)
+KEY_TOP = 'ax_deck_to_top'       # 이 화면에 막 들어왔다 — 첫 장으로 스크롤
 
 
 PER_ROW = 3
 
 
+def arm_scroll_top() -> None:
+    """
+    리포트 화면을 '막 열었을 때'의 상태로 맞춘다 — 고른 장 없음 + 첫 장으로 스크롤.
+
+    Streamlit 은 단계를 넘어가도 스크롤 위치를 그대로 들고 간다. 2단계 맨
+    아래의 [리포트 만들기] 에서 넘어오면 3단계도 화면 한복판부터 보인다.
+    """
+    st.session_state[KEY_SEL] = None
+    st.session_state[KEY_DRAWER] = None
+    st.session_state[KEY_TOP] = True
+
+
+def _scroll_to_first_slide() -> None:
+    """
+    첫 썸네일로 스크롤한다. 플래그를 소모해 **들어온 직후 한 번만** 움직인다.
+
+    한 번만 부르면 듣지 않는다. Streamlit 이 화면을 다 그린 뒤 이전 스크롤
+    위치를 되돌려 놓기 때문에, 잠깐(약 1초) 다시 붙잡고 있어야 한다. 그 사이
+    사용자가 스크롤·클릭하면 즉시 손을 뗀다 — 조작을 빼앗지 않기 위함이다.
+    """
+    if not st.session_state.pop(KEY_TOP, False):
+        return
+    # st.markdown 안의 <script> 는 실행되지 않는다. 컴포넌트 iframe 에서
+    # 부모 문서를 잡는다. 제목이 잘리지 않게 두는 여백은 CSS 쪽
+    # `.ax-thumb { scroll-margin-top }` 이 맡는다.
+    components.html(
+        """<script>
+        (function () {
+          const win = window.parent, doc = win.document;
+          let held = false, n = 0;
+          const release = () => { held = true; };
+          ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(
+              (e) => win.addEventListener(e, release, {once: true, passive: true}));
+          const id = setInterval(function () {
+            const el = doc.querySelector('.ax-thumb');
+            if (el) { el.scrollIntoView({block: 'start'}); }
+            if (held || ++n >= 15) { clearInterval(id); }
+          }, 80);
+        })();
+        </script>""",
+        height=0)
+
+
 def _first_editable(spec, registry) -> int:
     """
-    처음 고를 슬라이드 = 첫 번째 '수정 가능한' 장.
+    문안 슬롯이 있는 첫 번째 장.
 
-    1번(Checklist)은 문안 슬롯이 없어 수정 패널이 비어 있다. 그것을 기본
-    선택으로 두면 화면을 열자마자 '입력할 수 없는 창'을 보게 되므로,
-    바로 손댈 수 있는 장을 먼저 연다.
+    '문안을 고칠 수 있는 장으로 이동' 버튼의 목적지다. 화면을 열 때의 기본
+    선택으로는 쓰지 않는다 — 고르지 않은 장이 골라진 것처럼 보인다.
     """
     for i, sl in enumerate(spec.slides):
         bd = registry.get(sl.block_id)
@@ -162,7 +206,7 @@ _KIND_LABEL = {
 }
 
 
-def _thumb_card(sl, spec, registry, i: int, sel: int) -> None:
+def _thumb_card(sl, spec, registry, i: int, sel: Optional[int]) -> None:
     """썸네일 한 장 + 선택 버튼."""
     bd = registry.get(sl.block_id)
     label = ((bd.label if bd else '')
@@ -226,14 +270,17 @@ def _detail(sl, spec, registry, i: int) -> None:
 
 
 def _grid(spec, registry) -> None:
-    """썸네일 그리드. 고른 장이 속한 줄 바로 아래에 상세를 펼친다."""
+    """
+    썸네일 그리드. 고른 장이 속한 줄 바로 아래에 상세를 펼친다.
+
+    화면에 들어온 직후에는 아무 장도 고르지 않는다. 예전에는 첫 수정 가능한
+    장을 미리 골라 뒀는데, AE 가 고른 적 없는 장이 파랗게 눌린 채 상세까지
+    펼쳐져 있어 '왜 이 장이 열려 있지' 로 읽혔다.
+    """
     slides = spec.slides
     sel = st.session_state.get(KEY_SEL)
-    if sel is None:
-        sel = _first_editable(spec, registry)
-        st.session_state[KEY_SEL] = sel
-        st.session_state[KEY_DRAWER] = slides[sel].block_id
-    sel = max(0, min(int(sel), len(slides) - 1))
+    if sel is not None:
+        sel = max(0, min(int(sel), len(slides) - 1))
 
     for start in range(0, len(slides), PER_ROW):
         row = st.columns(PER_ROW, gap='small')
@@ -243,7 +290,7 @@ def _grid(spec, registry) -> None:
                 break
             with col:
                 _thumb_card(slides[i], spec, registry, i, sel)
-        if start <= sel < start + PER_ROW:
+        if sel is not None and start <= sel < start + PER_ROW:
             _detail(slides[sel], spec, registry, sel)
             st.divider()
 
@@ -596,5 +643,8 @@ def render(project_root: Path) -> None:
         if st.button('초안 다시 구성', width='stretch'):
             state.put(KEY_SPEC, None)
             state.put('ax_last_pptx', None)
-            st.session_state[KEY_SEL] = 0
+            arm_scroll_top()
             st.rerun()
+
+    # 화면을 다 그린 뒤에 부른다 — 썸네일이 DOM 에 있어야 잡을 수 있다.
+    _scroll_to_first_slide()
