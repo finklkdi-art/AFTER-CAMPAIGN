@@ -404,11 +404,75 @@ def add_kpi_tile(slide, x: float, y: float, w: float, h: float, *,
                  [(caption, HEAD_LIGHT, SZ_TABLE, INK)], align=PP_ALIGN.CENTER)
 
 
+def add_cover(slide, title: str, subtitle: str = '', date: str = '') -> None:
+    """
+    A-01 Cover — 캠페인·품목·시점을 한 화면에 선언.
+
+    레퍼런스 실측(R03 P01 · R04 P01 · R02 P01)의 3요소 구조를 따른다.
+      · 제품 KV 가 최소 한 변을 화면 밖으로 재단하며 한쪽을 차지
+      · 반대편 1/3 에 타이틀 (y 2.83 ~ 3.12 = 캔버스 38 ~ 42 %)
+      · 날짜는 타이틀 바로 아래 0 ~ 0.11in
+
+    KV 이미지 자산이 없으므로 그 자리를 브랜드 그라디언트 면으로 대신한다.
+    (레퍼런스에 존재하는 표현 — R03 표지 배경이 같은 방식의 그라디언트다.)
+    종전 구현은 흰 바탕 중앙에 텍스트를 쌓고 하단에 얇은 띠를 두른 형태로,
+    4개 덱 어디에도 없는 구성이었다.
+    """
+    set_slide_background(slide, WHITE)
+
+    # KV 자리 — 좌측 절반을 전면 재단으로 채운다
+    kv = add_rect(slide, 0, 0, SLIDE_W * 0.42, SLIDE_H, FLAG_B)
+    try:
+        kv.fill.gradient()
+        st = kv.fill.gradient_stops
+        st[0].color.rgb = _rgb('6B8FE0')
+        st[1].color.rgb = _rgb('2C6FD0')
+        kv.fill.gradient_angle = 315.0
+    except Exception:
+        pass
+
+    tx = SLIDE_W * 0.42 + 0.62          # KV 반대편 시작점
+    tw = SLIDE_W - tx - 0.49
+    add_text(slide, tx, 2.83, tw, 1.45,
+             [(title, HEAD_BOLD, SZ_COVER if len(title) <= 18 else SZ_SECTION,
+               BLACK)], line_spacing=1.30)
+    y = 4.39
+    if subtitle:
+        add_text(slide, tx, y, tw, 0.34, [(subtitle, HEAD_LIGHT, SZ_TAG, INK)])
+        y += 0.40
+    if date:
+        add_text(slide, tx, y, tw, 0.30, [(date, HEAD_LIGHT, SZ_TAG, FOOT)])
+
+
 def add_divider(slide, text: str, *, appendix: bool = False,
                 font_size: int = SZ_SECTION) -> None:
-    """L2 간지 / E.O.D — 다크 배경 정중앙"""
-    set_slide_background(slide, DARK_APPX if appendix else DARK_NAVY)
-    add_text(slide, 0, 3.2, SLIDE_W, 1.1, [(text, HEAD_BOLD, font_size, WHITE)],
+    """
+    A-03 Section Divider — 장 전환.
+
+    부록(appendix)은 레퍼런스 R03 P28 의 차콜 그라디언트 + 좌측 정렬을 따른다.
+    본편 간지는 R04 P02 의 밴드형 — 옅은 지면 위에 전폭 컬러 밴드(y 4.33 ·
+    h 1.93in)를 두고 그 안에 흰 28pt 를 중앙에 세운다.
+    종전에는 둘 다 다크네이비 전면에 텍스트만 얹어 두 유형이 구분되지 않았다.
+    """
+    if appendix:
+        set_slide_background(slide, DARK_APPX)
+        add_text(slide, 1.60, SLIDE_H / 2 - 0.55, SLIDE_W - 3.2, 1.1,
+                 [(text, HEAD_BOLD, font_size, WHITE)],
+                 anchor=MSO_ANCHOR.MIDDLE)
+        return
+
+    set_slide_background(slide, PANEL)
+    band = add_rect(slide, 0, 4.33, SLIDE_W, 1.93, FLAG_B)
+    try:
+        band.fill.gradient()
+        st = band.fill.gradient_stops
+        st[0].color.rgb = _rgb('2C6FD0')
+        st[1].color.rgb = _rgb('6B8FE0')
+        band.fill.gradient_angle = 0.0
+    except Exception:
+        pass
+    add_text(slide, 0, 4.33, SLIDE_W, 1.93,
+             [(text, HEAD_BOLD, font_size, WHITE)],
              align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
 
 
@@ -571,11 +635,69 @@ def _hide_value_axis(chart) -> None:
 
 
 def _strip_gridlines(chart) -> None:
+    """
+    격자선 정리 — 가로만 남기고 실측 색(#EDEDED 0.75pt)으로 칠한다.
+
+    레퍼런스 4개 덱은 예외 없이 가로 격자선만 쓰고 세로는 0건이다.
+    종전 구현은 둘 다 지워, 값을 눈으로 가늠할 기준선이 사라졌었다.
+    """
     for tag in ('c:majorGridlines', 'c:minorGridlines'):
-        for ax in list(chart._chartSpace.iter(qn('c:valAx'))) + \
-                  list(chart._chartSpace.iter(qn('c:catAx'))):
+        for ax in chart._chartSpace.iter(qn('c:catAx')):      # 세로선 제거
             for gl in ax.findall(qn(tag)):
                 ax.remove(gl)
+    for ax in chart._chartSpace.iter(qn('c:valAx')):          # 가로선 색 지정
+        for gl in ax.findall(qn('c:minorGridlines')):
+            ax.remove(gl)
+        gl = ax.find(qn('c:majorGridlines'))
+        if gl is None:
+            gl = ax.makeelement(qn('c:majorGridlines'), {})
+            ax.insert(0, gl)
+        for old_sp in gl.findall(qn('c:spPr')):
+            gl.remove(old_sp)
+        sp = gl.makeelement(qn('c:spPr'), {})
+        ln = sp.makeelement(qn('a:ln'), {'w': str(int(Pt(0.75)))})
+        fill = ln.makeelement(qn('a:solidFill'), {})
+        fill.append(fill.makeelement(qn('a:srgbClr'), {'val': GRIDLINE}))
+        ln.append(fill)
+        sp.append(ln)
+        gl.append(sp)
+
+
+def add_chart_annotation(slide, x: float, y: float, w: float, text: str,
+                         *, leader_to: Optional[float] = None):
+    """
+    차트 주석 — 흰 박스 + #BFBFBF 0.75pt 테두리 + 지시선 (실측 R03 P10).
+
+    피크·이벤트에만 붙이며 페이지당 8개를 넘기지 않는다. 모든 데이터
+    포인트에 라벨을 붙이는 방식은 레퍼런스가 쓰지 않는다.
+    """
+    rows = text.split('|')
+    h = 0.16 + 0.15 * len(rows)
+    add_rect(slide, x, y, w, h, WHITE, LINE_SOFT, 0.75)
+    add_text(slide, x + 0.05, y, w - 0.10, h,
+             [[(r, HEAD_LIGHT, SZ_CHART, INK)] for r in rows],
+             anchor=MSO_ANCHOR.MIDDLE)
+    if leader_to is not None and leader_to > y + h:
+        add_rect(slide, x + w / 2, y + h, 0.008, leader_to - (y + h), LINE_SOFT)
+
+
+def add_phase_band(slide, x: float, y: float, segments: Sequence[tuple],
+                   *, w: float, h: float = 0.28):
+    """
+    차트 하단 구간 밴드 — (라벨, 비중) 목록을 폭 비례로 나눠 칠한다.
+    회색→청색 계조로 운영 의도를 언어화하는 실측 장치 (R03 P10 · R04 P08).
+    """
+    shades = ('D3DCE6', 'C1D0E0', 'AEC4DA', '9BB8D4')
+    total = sum(max(v, 0) for _l, v in segments) or 1
+    cx = x
+    for i, (label, val) in enumerate(segments):
+        seg_w = w * max(val, 0) / total
+        if seg_w <= 0.01:
+            continue
+        add_rect(slide, cx, y, seg_w, h, shades[i % len(shades)])
+        add_text(slide, cx, y, seg_w, h, [(label, HEAD_LIGHT, SZ_CHART, INK)],
+                 align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+        cx += seg_w
 
 
 def _cat_label_skip(chart, every: int) -> None:
@@ -661,7 +783,9 @@ def add_achievement_chart(slide, items, *, x, y, w, h):
     plot.gap_width = 80
     plot.has_data_labels = False
 
-    fills = [GRAY_BAR, BLUE_MAIN]
+    # 제안=무채색 / 결과=액센트 — 눈이 실적으로 먼저 가게 하는 실측 대비.
+    # GRAY_BAR(#EBEBEB)는 팔레트 밖 값이라 실측 기준선 색으로 교체함.
+    fills = [BASELINE_BAR, BLUE_SKY]
     for i, s in enumerate(chart.series):
         s.format.fill.solid()
         s.format.fill.fore_color.rgb = _rgb(fills[i])

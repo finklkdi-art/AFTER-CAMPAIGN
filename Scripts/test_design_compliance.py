@@ -29,6 +29,10 @@ PALETTE = {
     'FFFFFF', '98D5FC', 'EDEDED', 'BFBFBF', '00C1B2', 'DDE7F2',
     # Structural — Color 시트의 보조색 행에 문서화된 값
     '3E86D6', 'EAF4FE', 'F1F6FC',
+    # 차트 하단 구간 밴드 계조 (Data 시트 · 회색→청색)
+    'D3DCE6', 'C1D0E0', 'AEC4DA', '9BB8D4',
+    # 표지·간지 KV 그라디언트 (R03 P01 · R04 P02)
+    '6B8FE0', '2C6FD0', '2C7BD6',
     # Checklist 전용 상태색 — 광고주 보고가 아니라 기획자 확인용이라 예외
     'A8761C', '1F6F4A',
 }
@@ -177,6 +181,37 @@ bad_sizes = {k: v for k, v in sizes.items() if k not in SZ_OK}
 bad_colors = {k: v for k, v in colors.items() if k not in PALETTE}
 bad_fills = {k: v for k, v in fills.items() if k not in PALETTE}
 
+# ── 아키타입 검사 (A-01 표지 · A-03 간지 · A-10 히어로 차트)
+cover_ok = div_ok = hero_ok = None
+cover_got = div_got = hero_got = '해당 장 없음'
+for s in prs.slides:
+    shapes = []
+    walk(s.shapes, shapes)
+    texts = [r for r in shapes if r['sh'].has_text_frame
+             and r['sh'].text_frame.text.strip()]
+    big = [r for r in texts
+           if any(run.font.size and run.font.size.pt >= 28
+                  for p in r['sh'].text_frame.paragraphs for run in p.runs)]
+    # 표지 — 전면재단 KV + 반대편 타이틀 y 2.83
+    bleed = [r for r in shapes if abs(r['y']) < .01 and abs(r['h']-7.5) < .02
+             and 3.0 < r['w'] < 9.0]
+    if bleed and big:
+        t = big[0]
+        cover_ok = abs(t['y']-2.83) < .06 and t['x'] > bleed[0]['w']
+        cover_got = f"KV폭 {bleed[0]['w']:.2f} · 타이틀 x{t['x']:.2f} y{t['y']:.2f}"
+    # 간지 — 전폭 밴드 y 4.33 h 1.93
+    band = [r for r in shapes if abs(r['x']) < .01 and abs(r['w']-13.333) < .02
+            and abs(r['y']-4.33) < .06 and abs(r['h']-1.93) < .06]
+    if band and big and div_ok is not True:
+        div_ok = True
+        div_got = f"밴드 y{band[0]['y']:.2f} h{band[0]['h']:.2f}"
+    # 히어로 차트 — x 0.84 · y 2.93 · w 11.48
+    for r in shapes:
+        if getattr(r['sh'], 'has_chart', False) and r['w'] > 10:
+            hero_ok = (abs(r['x']-0.84) < .06 and abs(r['y']-2.93) < .06
+                       and abs(r['w']-11.48) < .06)
+            hero_got = f"x{r['x']:.2f} y{r['y']:.2f} {r['w']:.2f}×{r['h']:.2f}"
+
 n = max(content_slides, 1)
 chk('FONT', 'SAMSUNG SS 7종만', not bad_fonts, f'위반 {len(bad_fonts)}종 {list(bad_fonts)[:3]}')
 chk('BOLD', 'bold 플래그 0', bolds == 0, f'{bolds}건')
@@ -191,6 +226,12 @@ chk('HDR-LABEL', '라벨 0.70/0.75 16pt', labels == n, f'{labels}/{n}장')
 chk('KEYMSG', '키메시지 0.99/1.24 24pt 중앙', keys == n, f'{keys}/{n}장')
 chk('PANEL', '전폭 패널 y2.56', panels == n, f'{panels}/{n}장')
 chk('FOOTNOTE', '각주 y7.02 8pt', foots == n, f'{foots}/{n}장')
+chk('ARCH-COVER', 'A-01 KV전면재단+타이틀y2.83', cover_ok, cover_got,
+    skip=cover_ok is None)
+chk('ARCH-DIVIDER', 'A-03 전폭밴드 y4.33 h1.93', div_ok, div_got,
+    skip=div_ok is None)
+chk('ARCH-HERO', 'A-10 차트 0.84/2.93 11.48', hero_ok, hero_got,
+    skip=hero_ok is None)
 chk('TBL-HEAD', '표 헤더 #E1F3FF', tbl_head_ok == tbl_head_n,
     f'{tbl_head_ok}/{tbl_head_n}셀' if tbl_head_n else '표 없음 — 측정 불가',
     skip=not tbl_head_n)

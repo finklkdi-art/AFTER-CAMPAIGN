@@ -264,25 +264,9 @@ class ReportRenderer:
     # ────────────────────────── 표지 / 목차 / 간지 / EOD
 
     def _slide_cover(self, slide, p):
-        T.set_slide_background(slide, T.WHITE)
-        title = p['title']
-        size = 28 if len(title) <= 18 else 24
-        T.add_text(slide, 1.0, 2.45, 11.3, 1.5,
-                   [(title, T.HEAD_BOLD, size, T.BLACK)])
-        T.add_text(slide, 1.0, 3.75, 11.3, 0.5,
-                   [(p['subtitle'], T.BODY_REG, 16, T.INK)])
-        T.add_text(slide, 1.0, 4.35, 11.3, 0.4,
-                   [(p['date'], T.BODY_REG, 12, T.MUTED)])
-        # 하단 그라데이션 띠 (표지에만 허용되는 장식)
-        band = T.add_rect(slide, 0, T.SLIDE_H - 0.18, T.SLIDE_W, 0.18, T.BLUE_SOFT)
-        try:
-            band.fill.gradient()
-            stops = band.fill.gradient_stops
-            stops[0].color.rgb = T._rgb('5B8DEF')
-            stops[1].color.rgb = T._rgb('A8C4F0')
-            band.fill.gradient_angle = 0
-        except Exception:
-            pass                                    # 단색 폴백
+        # 구성은 theme.add_cover 가 갖는다 (아키타입 A-01).
+        # 좌표·크기를 여기서 다시 정하지 않는다 — 단일 출처 원칙.
+        T.add_cover(slide, p['title'], p.get('subtitle', ''), p.get('date', ''))
 
     def _slide_toc(self, slide, p):
         T.set_slide_background(slide, T.DARK_NAVY)
@@ -436,6 +420,15 @@ class ReportRenderer:
     # ────────────────────────── 일자별 추이
 
     def _slide_daily_trend(self, slide, p):
+        """
+        A-10 Hero Chart — 일자별 추이.
+
+        2026.09.09 개편 — 종전엔 차트 59 % + 이벤트 목록 41 % 의 2단이었다.
+        레퍼런스(R03 P10 · R04 P08 · R01 s8·15·22)의 이 페이지는 예외 없이
+        **전폭 차트 하나**가 지면을 차지하고, 이벤트는 옆 목록이 아니라
+        차트 위 주석 박스 + 하단 구간 밴드로 표현한다. 목록으로 빼면
+        "언제 무엇을 했더니 어떻게 됐다"가 시간축에서 끊긴다.
+        """
         T.add_header(slide, self._tag, p['section'])
         n_days = len(p['categories'])
         T.add_key_message(slide, [
@@ -445,28 +438,43 @@ class ReportRenderer:
             {'text': f"{p['event_total']}건", 'emph': True},
             {'text': ' 기록'},
         ])
-        T.add_block_label(slide, f"일자별 {p['metric_name']} 추이", 0.70, 2.62)
+
+        # 히어로 차트 좌표 — 실측 고정값 (2026형 11.48 × 3.81in = 86 % × 51 %)
+        cx, cy, cw, ch = 0.84, 2.93, 11.48, 3.81
+        T.add_block_label(slide, f"일자별 {p['metric_name']} 추이", cx, cy - 0.29)
         T.add_line_chart(slide, p['categories'],
                          [{'name': p['metric_name'], 'values': p['values'],
                            'color': T.BLUE_SKY}],
-                         x=0.70, y=2.95, w=7.9, h=3.75,
+                         x=cx, y=cy, w=cw, h=ch - 0.34,
                          label_skip=max(1, n_days // 12))
 
-        T.add_block_label(slide, '주요 운영 이벤트', 8.95, 2.62, 3.9)
-        y = 2.98
-        for ev in p['events']:
-            T.add_text(slide, 8.95, y, 3.9, 0.4, [
-                (f"{ev['date']}  ", T.BODY_BOLD, 9, T.BLUE_MAIN),
-                (ev['note'][:34], T.BODY_REG, 9, T.INK),
-            ])
-            y += 0.42
-        if p['event_total'] > len(p['events']):
-            T.add_text(slide, 8.95, y, 3.9, 0.3,
-                       [(f"외 {p['event_total'] - len(p['events'])}건",
-                         T.BODY_REG, 9, T.FOOT)])
-        self._new_footer(slide, p.get('sources'))
+        # 이벤트를 시간축 위 주석으로 — 최대 8개, 2단 지그재그로 겹침 방지
+        events = (p.get('events') or [])[:8]
+        if events and n_days:
+            idx = {c: i for i, c in enumerate(p['categories'])}
+            box_w = 1.55
+            for k, ev in enumerate(events):
+                i = idx.get(ev.get('date'), int(n_days * (k + 0.5) / max(len(events), 1)))
+                frac = i / max(n_days - 1, 1)
+                bx = min(max(cx + cw * frac - box_w / 2, cx), cx + cw - box_w)
+                by = cy + 0.06 + (0.46 if k % 2 else 0.0)
+                T.add_chart_annotation(
+                    slide, bx, by, box_w,
+                    f"{ev.get('date', '')}|{str(ev.get('note', ''))[:22]}",
+                    leader_to=cy + ch - 0.40)
 
-    # ────────────────────────── 매체별 표
+        # 하단 구간 밴드 — 기간을 3등분해 운영 국면을 언어화한다
+        T.add_phase_band(slide, cx, cy + ch - 0.28,
+                         [('초반 임팩트 극대화', 1),
+                          ('유효 타겟 도달 극대화', 2),
+                          ('특화 매체 적극 운영', 1)],
+                         w=cw)
+
+        notes = list(p.get('sources') or [])
+        if p['event_total'] > len(events):
+            notes.append(f"운영 이벤트 {p['event_total']}건 중 "
+                         f"{len(events)}건만 차트에 표기 (나머지는 원본 참조)")
+        self._new_footer(slide, notes)
 
     def _slide_media_table(self, slide, p):
         """매체별·소재별 집행 결과 표 (같은 표 스타일을 공유)"""
@@ -480,8 +488,11 @@ class ReportRenderer:
                 {'text': f'{n_media}개 매체', 'emph': True},
                 {'text': ' 집행 결과 — 상세 지표 하기 표 기준'},
             ])
+        # 표 위치는 실측 규격 — x 0.38 · 폭 94 % (레퍼런스 80.6~94.4 %),
+        # 대괄호 라벨은 블록 상단에서 0.29in 위 (design-system §6).
+        tbl_x, tbl_w, tbl_y = 0.38, 12.57, 2.95
         if p.get('block_label'):
-            T.add_block_label(slide, p['block_label'], 0.70, 2.62)
+            T.add_block_label(slide, p['block_label'], tbl_x, tbl_y - 0.29)
         n_rows = len(p['rows']) + 1
         # 행 높이는 theme 의 실측 사다리에서 고른다 (0.403→0.37→0.311→0.234→0.144).
         # 임의값을 쓰면 행이 많을 때 표가 각주 위로 넘치고, 적을 때는
@@ -489,10 +500,11 @@ class ReportRenderer:
         row_h = T.row_height_for(n_rows, top=2.95)
         T.add_styled_table(
             slide, p['header'], p['rows'],
-            x=0.70, y=2.95, w=11.9,
+            x=tbl_x, y=tbl_y, w=tbl_w,
             col_w=p.get('col_w') or [1.7, 1.5, 1.5, 1.3, 1.2, 0.9, 0.9, 1.0, 1.0],
-            font_size=9 if n_rows <= 16 else 8,
-            row_h=row_h, total_row=p.get('use_total_row', True))
+            font_size=T.SZ_TABLE if n_rows <= 16 else T.SZ_FOOT,
+            row_h=row_h, total_row=p.get('use_total_row', True),
+            label_col=True)
         self._new_footer(slide, p.get('sources'))
 
     # ────────────────────────── 포스트바이 원본 표 (Deep-Dive 1:1 미러링)
