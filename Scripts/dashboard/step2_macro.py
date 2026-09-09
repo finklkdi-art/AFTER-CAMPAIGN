@@ -155,32 +155,104 @@ def _summary_charts(dataset) -> None:
 
 # ═══════════════════════════ 필수 메타 (타이핑 3개)
 
-def _render_meta(knowledge: CampaignKnowledge, dataset) -> None:
-    st.markdown('### 이 캠페인의 기본 정보만 확인해 주세요')
-    st.caption('보고서 표지와 파일명에 그대로 쓰여요.')
+KEY_META_ASKED = 'ax_meta_asked'      # 팝업을 이미 띄웠는가
 
-    if K_NAME not in st.session_state:
-        st.session_state[K_NAME] = knowledge.campaign_name or ''
+
+def _seed_meta(knowledge: CampaignKnowledge) -> None:
+    """세션에 기본값을 한 번만 심는다 (파서 추정값 · 오늘 날짜)."""
+    if K_ADV not in st.session_state:
+        st.session_state[K_ADV] = knowledge.advertiser or ''
     if K_CAT not in st.session_state:
         st.session_state[K_CAT] = knowledge.category or ''
+    if K_NAME not in st.session_state:
+        st.session_state[K_NAME] = knowledge.campaign_name or ''
     if K_DATE not in st.session_state:
         st.session_state[K_DATE] = (knowledge.date_created
                                     or datetime.now().strftime('%y%m%d'))
-    if K_ADV not in st.session_state:
-        st.session_state[K_ADV] = knowledge.advertiser or ''
 
-    c1, c2, c3 = st.columns([2.2, 1, 1])
+
+# 팝업 전용 위젯 키 — 본문 4칸과 **키를 공유하지 않는다.**
+# 같은 key 를 두 곳에 두면 st.dialog 가 열려 있는 동안 본문도 함께 그려져
+# StreamlitDuplicateElementKey 로 화면이 죽는다 (실측 재현 2026.09.09).
+# 팝업은 자기 값을 들고 있다가 '확인'을 누를 때만 본문 키로 옮긴다.
+_DLG = {K_ADV: 'macro_adv_dlg', K_CAT: 'macro_cat_dlg',
+        K_NAME: 'macro_name_dlg', K_DATE: 'macro_date_dlg'}
+
+
+@st.dialog('캠페인 기본 정보', width='small')
+def _meta_dialog() -> None:
+    """
+    자료를 읽은 직후 한 번 띄우는 입력 팝업.
+
+    이 4개는 파서가 문서에서 확정할 수 없는 값이다 (업로드 경로에는 폴더명이
+    없어 추론에 기댈 수도 없음 — CLAUDE.md 2 · 3.5). 본문 어딘가에 섞어 두면
+    그냥 지나쳐 표지·파일명이 빈 채로 나가므로, 먼저 물어보고 시작한다.
+    막지는 않는다 — '나중에 입력'으로 닫아도 파이프라인은 계속 흐르고,
+    빈 값은 Checklist 에 '미확인'으로 남는다 (CLAUDE.md 3.5).
+    """
+    for src, dst in _DLG.items():
+        st.session_state.setdefault(dst, st.session_state.get(src, ''))
+
+    st.markdown('<p class="ax-dlg-lead">'
+                '<span class="kbr">보고서 표지와 파일명에 그대로 쓰이는 값이에요.</span><br>'
+                '<span class="kbr">문서에서 자동으로 확정할 수 없어</span> '
+                '<span class="kbr">여기서 한 번만 확인해 주세요.</span></p>',
+                unsafe_allow_html=True)
+
+    st.text_input('광고주', key=_DLG[K_ADV], placeholder='예) 삼성전자')
+    st.text_input('제품명', key=_DLG[K_CAT],
+                  placeholder='예) 비스포크 AI 얼음정수기',
+                  help='출력 파일명의 [품목] 자리에 들어가요')
+    st.text_input('캠페인명', key=_DLG[K_NAME],
+                  placeholder='예) 2025 무빙스타일 캠페인')
+    st.text_input('작성일자 (YYMMDD)', key=_DLG[K_DATE])
+
+    c1, c2 = st.columns([1, 1])
     with c1:
+        if st.button('나중에 입력', key='ax_meta_later', width='stretch'):
+            st.session_state[KEY_META_ASKED] = True
+            st.rerun()
+    with c2:
+        if st.button('확인', key='ax_meta_ok', type='primary', width='stretch'):
+            for dst, src in _DLG.items():
+                st.session_state[dst] = str(
+                    st.session_state.get(src, '') or '').strip()
+            st.session_state[KEY_META_ASKED] = True
+            _touch('overview')
+            st.rerun()
+
+
+def _render_meta(knowledge: CampaignKnowledge, dataset) -> None:
+    _seed_meta(knowledge)
+
+    if not st.session_state.get(KEY_META_ASKED):
+        _meta_dialog()
+
+    st.markdown('### 이 캠페인의 기본 정보만 확인해 주세요')
+    st.caption('보고서 표지와 파일명에 그대로 쓰여요. 여기서 바로 고쳐도 돼요.')
+
+    c1, c2, c3, c4 = st.columns([1.1, 1.5, 2.0, 1.0])
+    with c1:
+        st.text_input('광고주', key=K_ADV, placeholder='예) 삼성전자',
+                      on_change=_touch, args=('overview',))
+    with c2:
+        st.text_input('제품명', key=K_CAT,
+                      placeholder='예) 비스포크 AI 얼음정수기',
+                      help='출력 파일명의 [품목] 자리에 들어가요',
+                      on_change=_touch, args=('overview',))
+    with c3:
         st.text_input('캠페인명', key=K_NAME,
                       placeholder='예) 2025 무빙스타일 캠페인',
                       on_change=_touch, args=('overview',))
-    with c2:
-        st.text_input('품목', key=K_CAT, placeholder='예) 냉장고',
-                      help='출력 파일명의 [품목] 자리',
+    with c4:
+        st.text_input('작성일자 (YYMMDD)', key=K_DATE,
                       on_change=_touch, args=('overview',))
-    with c3:
-        st.text_input('작성 일자 (YYMMDD)', key=K_DATE,
-                      on_change=_touch, args=('overview',))
+
+    if st.button('기본 정보 팝업으로 다시 입력', key='ax_meta_reopen'):
+        for src, dst in _DLG.items():
+            st.session_state[dst] = st.session_state.get(src, '')
+        st.session_state[KEY_META_ASKED] = False
+        st.rerun()
 
     # 파서가 읽은 표기는 '참고'로만 (임의 확정 금지 — Rule Book 2.1)
     hints = []
@@ -194,11 +266,9 @@ def _render_meta(knowledge: CampaignKnowledge, dataset) -> None:
         if dataset.postbuy and dataset.postbuy.campaign:
             hints.append(f'포스트바이: {dataset.postbuy.campaign}')
 
-    st.markdown('###### 광고주 · 기간 · 소재 · 전략')
+    st.markdown('###### 기간 · 소재 · 전략')
     st.caption('문서에서 자동으로 정리한 값이에요.')
     if True:
-        st.text_input('광고주', key=K_ADV, placeholder='예) 삼성전자',
-                      on_change=_touch, args=('overview',))
         if hints:
             st.caption('문서에서 읽은 표기(참고) · ' + '  |  '.join(hints))
         # 표지에 찍힐 이름이라 문서와 크게 다르면 한 번은 짚어 준다.

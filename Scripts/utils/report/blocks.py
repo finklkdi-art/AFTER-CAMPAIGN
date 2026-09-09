@@ -609,6 +609,24 @@ def _blocks() -> List[BlockDef]:
     ]
 
 
+def _fmt_cover_date(raw: str) -> str:
+    """
+    표지용 작성일자 표기. 'YYMMDD' → 'YYYY.MM.DD'.
+
+    형식이 다르면 **추측해서 고치지 않고 원문 그대로** 보여 준다
+    (Rule Book 2.1). 비어 있을 때만 오늘 날짜로 채운다.
+    """
+    from datetime import date
+    txt = (raw or '').strip()
+    if not txt:
+        return date.today().strftime('%Y.%m.%d')
+    if len(txt) == 6 and txt.isdigit():
+        return f'20{txt[0:2]}.{txt[2:4]}.{txt[4:6]}'
+    if len(txt) == 8 and txt.isdigit():
+        return f'{txt[0:4]}.{txt[4:6]}.{txt[6:8]}'
+    return txt
+
+
 class ReportSpecBuilder:
     """CampaignDataset → ReportSpec"""
 
@@ -1032,11 +1050,18 @@ class ReportSpecBuilder:
 
     @staticmethod
     def _cover(knowledge: CampaignKnowledge) -> SlideSpec:
-        from datetime import date
+        """
+        표지 — 캠페인명 + '결과보고서' + 작성일자 (사용자 지시 2026.09.09).
+
+        작성일자는 AE 가 Stage 1.5 팝업에서 넣은 `date_created`(YYMMDD)를
+        쓴다. 예전엔 렌더 시각(date.today)을 찍어, AE 가 지정한 날짜와
+        표지가 어긋났다 — 파일명은 date_created 를 쓰는데 표지만 오늘이라
+        같은 보고서에 두 날짜가 생기는 상태였다.
+        """
         return SlideSpec('cover', {
             'title': knowledge.campaign_name or '캠페인',
-            'subtitle': '캠페인 결과보고',
-            'date': date.today().strftime('%Y.%m'),
+            'subtitle': '결과보고서',
+            'date': _fmt_cover_date(knowledge.date_created),
         })
 
     # ────────────────────────── Post-buy 원본 표 1:1 미러링 (Ch3 / Ch4)

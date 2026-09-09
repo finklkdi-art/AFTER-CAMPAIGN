@@ -738,6 +738,12 @@ _LANDING_BASE = """
   .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5 {
       word-break: keep-all !important; overflow-wrap: break-word !important; }
   .kbr { display: inline-block; }
+
+  /* 기본 정보 입력 팝업 (st.dialog) — 화면에 처음 뜨는 문장이라
+     줄이 절 경계에서만 바뀌도록 .kbr 로 감싸 쓴다 (claude.md 5). */
+  .ax-dlg-lead { margin: 0 0 14px; font-size: .92rem; line-height: 1.62;
+      color: var(--ax-fg-2); word-break: keep-all; }
+
   [class^="after-"] span, [class*=" after-"] span, h1 span, h2 span, h3 span, h4 span {
       font-size: inherit; font-weight: inherit; line-height: inherit; letter-spacing: inherit; }
 

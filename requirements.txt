@@ -2,7 +2,7 @@
 # 외부 호스팅(Streamlit Community Cloud 등) 배포 전제 (2026.09 개정)
 
 # --- 웹 UI ---
-streamlit>=1.28.0
+streamlit>=1.37.0       # st.dialog (기본 정보 입력 팝업) 최소 버전
 altair>=5.0.0           # dashboard/charts.py 시각화 (streamlit 내장 의존성이지만 명시)
 
 # --- 데이터 처리 ---
