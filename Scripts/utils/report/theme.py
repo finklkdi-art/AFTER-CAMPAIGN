@@ -109,7 +109,7 @@ ROW_H_LADDER = (0.403, 0.37, 0.311, 0.234, 0.144)
 
 
 def row_height_for(n_rows: int, *, top: float = CONTENT_Y + 0.45,
-                   bottom: float = FOOT_Y - 0.10) -> float:
+                   bottom: float = FOOT_Y - 0.06) -> float:
     """
     행 수에 맞는 행 높이를 사다리에서 고른다.
 

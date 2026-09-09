@@ -244,14 +244,46 @@ def parse_date(value: Any) -> Optional[str]:
     return None if pd.isna(ts) else ts.strftime('%Y-%m-%d')
 
 
-# 기간 표기 분해: "4/18~4/30", "6/30~8/27", "25/06/26 ~ 08/10", "6/27, 7/26"
+# 기간 표기 분해: "4/18~4/30", "6/30~8/27", "25/06/26 ~ 08/10",
+#                 "2025-04-01~2025-04-30", "6/27, 7/26"
+#
+# 🔴 연도가 붙은 표기를 먼저 잡아야 한다.
+#    MM-DD 규칙(_RANGE_RE)은 `\d{1,2}` 라서 "2025-04-01" 에 .search() 를 걸면
+#    연도 뒷자리 "25" 를 월로 물어 "25-04" 를 만들어 낸다. 그 값은 뒤에서
+#    date(2000, 25, ...) 로 넘어가 ValueError 를 내고 로드맵 슬라이드가
+#    통째로 날아간다 (2026.09.09 실측 재현).
+_YMD_RANGE_RE = re.compile(
+    r'(?<!\d)\d{2,4}\s*[/.\-]\s*(\d{1,2})\s*[/.\-]\s*(\d{1,2})'      # 시작 Y-M-D
+    r'\s*[~\-–—]\s*'
+    r'(?:\d{2,4}\s*[/.\-]\s*)?(\d{1,2})\s*[/.\-]\s*(\d{1,2})(?!\d)'  # 종료 [Y-]M-D
+)
+_YMD_SINGLE_RE = re.compile(
+    r'^(?<!\d)\d{2,4}\s*[/.\-]\s*(\d{1,2})\s*[/.\-]\s*(\d{1,2})(?!\d)'
+)
+
 _RANGE_RE = re.compile(
-    r'(\d{1,2})\s*[/.\-]\s*(\d{1,2})\s*[~\-–—]\s*(?:(\d{1,2})\s*[/.\-]\s*)?(\d{1,2})'
+    r'(?<!\d)(\d{1,2})\s*[/.\-]\s*(\d{1,2})\s*[~\-–—]\s*'
+    r'(?:(\d{1,2})\s*[/.\-]\s*)?(\d{1,2})(?!\d)'
 )
 
 
 # 단일 일자 표기: "4/25", "8/8(금)"
-_SINGLE_RE = re.compile(r'^(\d{1,2})\s*[/.\-]\s*(\d{1,2})')
+_SINGLE_RE = re.compile(r'^(\d{1,2})\s*[/.\-]\s*(\d{1,2})(?!\d)')
+
+
+def _md(month, day) -> Optional[str]:
+    """
+    (월, 일) → 'MM-DD'. 달력에 없는 값이면 None — 추측하지 않는다 (Rule Book 2.1).
+
+    검증 없이 포맷만 하던 것이 위 '25-04' 사고의 두 번째 원인이었다.
+    """
+    try:
+        m, d = int(month), int(day)
+    except (TypeError, ValueError):
+        return None
+    if not (1 <= m <= 12 and 1 <= d <= 31):
+        return None
+    return f'{m:02d}-{d:02d}'
 
 
 def split_period(raw: Any) -> tuple:
@@ -268,22 +300,32 @@ def split_period(raw: Any) -> tuple:
         return None, None
 
     compact = s.replace(' ', '')
+
+    # ① 연도가 붙은 범위 — "2025-04-01~2025-04-30", "25/06/26~08/10"
+    m = _YMD_RANGE_RE.search(compact)
+    if m:
+        start, end = _md(m.group(1), m.group(2)), _md(m.group(3), m.group(4))
+        return (start, end) if start and end else (None, None)
+
+    # ② MM-DD 범위 — "4/18~4/30", "6/1~30"(월 생략)
     m = _RANGE_RE.search(compact)
     if m:
         m1, d1, m2, d2 = m.group(1), m.group(2), m.group(3), m.group(4)
         if m2 is None:
-            m2 = m1                 # "6/1~30" 처럼 월이 생략된 경우
-        try:
-            return f"{int(m1):02d}-{int(d1):02d}", f"{int(m2):02d}-{int(d2):02d}"
-        except ValueError:
-            return None, None
+            m2 = m1
+        start, end = _md(m1, d1), _md(m2, d2)
+        return (start, end) if start and end else (None, None)
 
+    # ③ 연도가 붙은 단일 일자 — "2025-04-01"
+    m = _YMD_SINGLE_RE.match(compact)
+    if m:
+        day = _md(m.group(1), m.group(2))
+        return (day, day) if day else (None, None)
+
+    # ④ MM-DD 단일 일자 — "4/25", "8/8(금)"
     m = _SINGLE_RE.match(compact)
     if m:
-        try:
-            day = f"{int(m.group(1)):02d}-{int(m.group(2)):02d}"
-            return day, day
-        except ValueError:
-            return None, None
+        day = _md(m.group(1), m.group(2))
+        return (day, day) if day else (None, None)
 
     return None, None

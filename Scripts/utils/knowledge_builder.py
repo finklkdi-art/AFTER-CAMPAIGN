@@ -126,11 +126,20 @@ class KnowledgeBuilder:
                 status='error',
                 error_msg=parsed.get('error_msg', 'Unknown error'),
             ))
+            # 문서보안(DRM) 잠김은 '파싱 실패' 중에서도 성격이 다르다.
+            # 파일이 깨진 게 아니라 **해제하면 그대로 읽히는** 상태이고,
+            # 잠긴 채로는 표·차트·인사이트가 한 장도 만들어지지 않아 보고서가
+            # 통째로 빈다. warning 으로 묻히면 AE 가 '경고 몇 건 있네' 하고
+            # 넘어가므로 error 로 올려 Checklist 최상단에 세운다 (2026.09.09).
+            # message 형식은 바꾸지 않는다 — step2_macro 가 ':' 뒤를 파일명으로
+            # 잘라 쓰고 있어 형식을 바꾸면 대상 목록이 깨진다.
+            err = parsed.get('error_msg', 'Unknown error')
+            is_drm = 'DRM' in err or '문서보안' in err
             knowledge.add_checklist_item(ChecklistItem(
-                type='file_parse_error',
-                severity='warning',
+                type='file_drm_locked' if is_drm else 'file_parse_error',
+                severity='error' if is_drm else 'warning',
                 message=f'파일 파싱 실패: {file_name}',
-                detail=parsed.get('error_msg', 'Unknown error'),
+                detail=err,
                 source=f'file_parser:{file_name}',
             ))
             return

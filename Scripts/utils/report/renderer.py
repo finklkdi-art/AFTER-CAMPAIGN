@@ -21,9 +21,26 @@ from .blocks import ReportSpec, SlideSpec
 from .emphasis import to_runs
 
 
-def _day_ord(mmdd: str) -> int:
-    m, d = mmdd.split('-')
-    return date(2000, int(m), int(d)).toordinal()
+#: 타임라인 막대 색 순환 — 실측 트랙 순서(청록 → 옅은 하늘 → 액센트)
+_BAR_CYCLE = ('00C1B2', '98D5FC', T.BLUE_SKY, '108BC6')
+#   4색인 이유 — 3색이면 매체가 4개인 캠페인에서 1번과 4번이 같은 색이 된다.
+#   색이 매체 구분자라 겹치면 읽을 수 없다 (실측 캠페인 다수가 매체 4종).
+
+
+def _day_ord(mmdd: str) -> Optional[int]:
+    """
+    'MM-DD' → 서수. 해석 불가면 None (예외를 올리지 않는다).
+
+    파서가 이상값을 흘리면 여기서 ValueError 가 나 로드맵 슬라이드가 통째로
+    실패 안내로 대체됐다 (2026.09.09). 근본 원인은 `sheet_utils.split_period`
+    에서 고쳤으나, 한 칸의 표기 오류가 장 전체를 날리는 구조 자체를 남겨 둘
+    이유가 없어 여기서도 막는다 (CLAUDE.md 3.3 — 파싱 에러 시 강제 종료 금지).
+    """
+    try:
+        m, d = str(mmdd).split('-')
+        return date(2000, int(m), int(d)).toordinal()
+    except (ValueError, TypeError, AttributeError):
+        return None
 
 
 class ReportRenderer:
@@ -38,6 +55,9 @@ class ReportRenderer:
         self._src_cache = {}       # 원본 pptx 경로 → Presentation (표 복제용)
 
     # ------------------------------------------------------------------
+
+    #: 전폭 콘텐츠 패널을 깔지 않는 장 — 자체 배경/전면 이미지를 쓰는 종류
+    _NO_PANEL_KINDS = frozenset({'cover', 'toc', 'divider', 'eod'})
 
     #: 렌더 중 건너뛴 슬라이드 종류 (호출부가 Checklist 에 남길 수 있게 공개)
     skipped_kinds: List[str]
@@ -74,6 +94,13 @@ class ReportRenderer:
             # 이제 실패한 장은 비워 두고 사실을 기록한 뒤 계속 진행한다
             # (claude.md 3.3 파싱 에러 시 강제 종료 금지 · 3.1 조용한 소실 금지).
             slide = self.prs.slides.add_slide(self._blank)
+            # 전폭 콘텐츠 패널을 핸들러보다 먼저 깐다 (z-order 최하단).
+            # 레퍼런스 4개 덱은 예외 없이 y 2.52~2.76 에서 하단까지 옅은
+            # 패널을 깔고 그 위에 흰 카드·표를 얹는다. 그림자를 쓰지 않는
+            # 이 시스템에서 깊이를 만드는 유일한 장치라, 이게 없으면
+            # 표·카드가 배경에 떠 있는 것처럼 보인다.
+            if s.kind not in self._NO_PANEL_KINDS:
+                T.add_content_panel(slide)
             try:
                 handler(slide, s.payload)
             except Exception as e:
@@ -271,9 +298,21 @@ class ReportRenderer:
                 {'text': p['period_raw'], 'emph': True},
             ])
 
-        bars = p['bars']
-        d0 = min(_day_ord(b['start']) for b in bars) - 2
-        d1 = max(_day_ord(b['end']) for b in bars) + 2
+        # 기간을 해석할 수 있는 막대만 그린다. 한 칸의 표기 오류로 장 전체를
+        # 잃지 않되, 빠진 막대는 각주에 남긴다 (CLAUDE.md 3.1 — 조용한 소실 금지).
+        all_bars = p['bars']
+        bars, dropped = [], []
+        for b in all_bars:
+            so, eo = _day_ord(b.get('start')), _day_ord(b.get('end'))
+            if so is None or eo is None:
+                dropped.append(b.get('label') or b.get('media') or '(이름 없음)')
+                continue
+            bars.append((b, so, eo))
+        if not bars:
+            raise ValueError(f'기간을 해석할 수 있는 막대가 없음 (총 {len(all_bars)}건)')
+
+        d0 = min(so for _b, so, _e in bars) - 2
+        d1 = max(eo for _b, _s, eo in bars) + 2
         span = max(d1 - d0, 1)
 
         gx0, gx1 = 2.75, 12.65
@@ -301,7 +340,22 @@ class ReportRenderer:
                            align=PP_ALIGN.CENTER)
             probe += 1
 
-        for i, b in enumerate(bars):
+        # 트랙 밴드 — 매체군이 바뀔 때마다 흰 띠와 패널색을 교차시킨다.
+        # 레퍼런스(R03 P06 · R04 P04)는 행이 아니라 **매체군** 단위로 묶어
+        # 어느 막대가 한 덩어리인지 보이게 한다. 행 단위로 교차시키면
+        # 같은 매체의 두 라인이 갈라져 오히려 읽기 어렵다.
+        groups, seen = [], {}
+        for b, _s, _e in bars:
+            g = b.get('media') or b.get('label') or ''
+            if g not in seen:
+                seen[g] = len(seen)
+            groups.append(seen[g])
+        for i, gi in enumerate(groups):
+            if gi % 2 == 0:
+                T.add_rect(slide, 0.55, gy0 + i * row_h,
+                           gx1 - 0.55 + 0.10, row_h, T.WHITE)
+
+        for i, (b, so, eo) in enumerate(bars):
             y = gy0 + i * row_h
             # 소재 축 로드맵처럼 라벨을 직접 지정하는 경우를 허용한다
             label = b.get('label') or b['media']
@@ -312,10 +366,13 @@ class ReportRenderer:
             T.add_text(slide, 0.70, y + row_h * 0.10, 1.95, row_h * 0.8,
                        [(label, T.BODY_REG, 9, T.BLACK)],
                        anchor=MSO_ANCHOR.MIDDLE)
-            x_s, x_e = X(_day_ord(b['start'])), X(_day_ord(b['end']))
+            x_s, x_e = X(so), X(eo)
             bar_w = max(x_e - x_s, 0.06)
+            # 막대 색도 매체군 단위로 순환한다 — 같은 매체의 여러 라인은
+            # 반드시 같은 색이어야 한다 (색이 곧 매체 구분자).
+            bar_fill = _BAR_CYCLE[groups[i] % len(_BAR_CYCLE)]
             T.add_rect(slide, x_s, y + row_h * 0.22, bar_w, row_h * 0.52,
-                       T.BLUE_MAIN)
+                       bar_fill)
             period_txt = f"{b['start'].replace('-', '/')}~{b['end'].replace('-', '/')}"
             T.add_text(slide, min(x_e + 0.08, gx1 - 1.0), y + row_h * 0.14,
                        1.4, row_h * 0.7,
@@ -325,6 +382,10 @@ class ReportRenderer:
         notes = list(p.get('sources') or [])
         if p.get('note'):
             notes.append(p['note'])
+        if dropped:
+            notes.append('기간 표기를 해석하지 못해 제외한 라인 '
+                         f'{len(dropped)}건 — ' + ', '.join(dropped[:5])
+                         + (' 외' if len(dropped) > 5 else ''))
         self._new_footer(slide, notes)
 
     # ────────────────────────── 운영 요약
@@ -400,7 +461,10 @@ class ReportRenderer:
         if p.get('block_label'):
             T.add_block_label(slide, p['block_label'], 0.70, 2.62)
         n_rows = len(p['rows']) + 1
-        row_h = 0.24 if n_rows <= 16 else 0.22
+        # 행 높이는 theme 의 실측 사다리에서 고른다 (0.403→0.37→0.311→0.234→0.144).
+        # 임의값을 쓰면 행이 많을 때 표가 각주 위로 넘치고, 적을 때는
+        # 레퍼런스보다 납작해져 다른 문서처럼 보인다.
+        row_h = T.row_height_for(n_rows, top=2.95)
         T.add_styled_table(
             slide, p['header'], p['rows'],
             x=0.70, y=2.95, w=11.9,
@@ -631,7 +695,7 @@ class ReportRenderer:
             x=tx, y=2.95, w=tw,
             col_w=[1.1, 1.3, 1.2, 1.2, 1.2, 0.9],
             font_size=8.5 if n_rows > 10 else 9,
-            row_h=0.26 if n_rows <= 12 else 0.23)
+            row_h=T.row_height_for(n_rows, top=2.95))
         self._new_footer(slide, p.get('sources'))
 
     # ────────────────────────── 인용 (검색량/버즈)
