@@ -30,16 +30,23 @@ EMU_PER_IN = 914400
 INK = '404040'
 BLACK = '000000'
 WHITE = 'FFFFFF'
-BLUE_MAIN = '0666D6'
-BLUE_EMPH = '4472C4'
-BLUE_SOFT = '5B9BD5'
-BLUE_SKY = '0096FF'
+BLUE_SKY = '0096FF'        # Primary — 레퍼런스 시그니처 액센트
 BLUE_LIGHT = '18A2FF'
+# 2026.09.09 — 구 액센트 토큰을 실측 팔레트로 정렬함.
+#   렌더러 49곳이 아래 이름을 쓰고 있어 호출부를 일일이 고치는 대신
+#   토큰이 가리키는 값만 바꾼다(단일 출처 원칙). 구 값은 표본 1종에서
+#   온 것이라 4개 덱 실측 팔레트에 존재하지 않았다.
+#     BLUE_MAIN 0666D6 → 0096FF (Primary)
+#     BLUE_EMPH 4472C4 → 0070C0 (Primary Dark)
+#     BLUE_SOFT 5B9BD5 → B3E0FF (Primary Pale)
+BLUE_MAIN = BLUE_SKY
+BLUE_EMPH = '0070C0'
+BLUE_SOFT = 'B3E0FF'
 CYAN_ACCENT = '5FDDFB'
 TBL_HEAD = 'E1F3FF'
 HILITE = 'FEF5BE'
 TOTAL_ROW = '767171'
-MUTED = '808080'
+MUTED = '7F7F7F'          # 구 808080 → 실측 각주/비활성 색으로 정렬
 FOOT = '7F7F7F'
 LINE = '747474'
 LINE_SOFT = 'BFBFBF'

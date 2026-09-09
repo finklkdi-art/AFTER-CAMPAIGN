@@ -224,9 +224,22 @@ class ReportRenderer:
 
     def _slide_checklist(self, slide, p):
         T.add_header(slide, self._tag, '[Checklist] 기획자 최종 검수 및 보정 항목')
+        # 키메시지 자리를 비워 두면 이 장만 위계가 무너진다 (아키타입 A-13).
+        # 결론을 먼저 말하는 이 시스템의 규칙대로 '몇 건인지'를 24pt 로 세운다.
+        rows_all = p.get('rows', [])
+        n_err = sum(1 for r in rows_all if r.get('sev') == 'error')
+        total = len(rows_all) + int(p.get('overflow') or 0)
         mode = '포스트바이 포함 (Full)' if p.get('mode') == 'full' else '포스트바이 없음 (Lite)'
-        T.add_text(slide, 0.70, 1.10, 12.0, 0.3,
-                   [(f'데이터 구성: {mode}', T.BODY_REG, 10, T.MUTED)])
+        if total:
+            head = [{'text': '확인이 필요한 항목 '},
+                    {'text': f'{total}건', 'emph': True}]
+            if n_err:
+                head += [{'text': ' · 즉시 조치 '},
+                         {'text': f'{n_err}건', 'emph': True, 'color': T.NEG}]
+        else:
+            head = [{'text': '확인이 필요한 항목 '},
+                    {'text': '없음', 'emph': True}]
+        T.add_key_message(slide, head, sub=f'데이터 구성: {mode}')
 
         rows = p.get('rows', [])
         if not rows:
@@ -292,6 +305,15 @@ class ReportRenderer:
 
     def _slide_roadmap(self, slide, p):
         T.add_header(slide, self._tag, p['section'])
+        # 기간 표기가 없으면 예전엔 키메시지 없이 그렸다 — 이 장만 제목이
+        # 사라져 덱 안에서 위계가 끊긴다. 표기가 없을 때는 막대 수로 대신한다.
+        if not p.get('period_raw'):
+            n_bar = len(p.get('bars') or [])
+            T.add_key_message(slide, [
+                {'text': '집행 라인 '},
+                {'text': f'{n_bar}건', 'emph': True},
+                {'text': ' 기준 로드맵'},
+            ])
         if p.get('period_raw'):
             T.add_key_message(slide, [
                 {'text': '캠페인 집행 기간  '},
@@ -721,11 +743,11 @@ class ReportRenderer:
     # 느슨한 것부터 시도하고 전량이 들어가는 첫 후보를 채택한다.
     # 실제 보고서는 한 장에 3단 블록 4개를 담으므로 전량 게재를 우선한다.
     _DENSITY_STEPS = (
-        (12.0, 11.0, 9.5, 3, False, False),
+        (12.0, 11.0, 9.0, 3, False, False),
         (11.5, 10.5, 9.0, 3, False, False),
         (11.0, 10.0, 8.5, 3, False, False),
-        (10.5, 9.5, 8.0, 3, False, False),
-        (10.5, 9.5, 8.0, 2, False, True),
+        (10.5, 9.0, 8.0, 3, False, False),
+        (10.5, 9.0, 8.0, 2, False, True),
         (10.0, 9.0, 8.0, 2, True, True),
         (9.5, 8.5, 7.5, 1, True, True),
     )
@@ -797,7 +819,7 @@ class ReportRenderer:
             bold = idx <= 1                       # 머리 두 줄은 강조
             T.add_text(slide, x + 0.34, iy, w - 0.68, lh,
                        [(ln, T.BODY_BOLD if bold else T.BODY_REG,
-                         12.5 if idx == 0 else 11.0,
+                         12.0 if idx == 0 else 11.0,
                          T.INK if bold else T.MUTED)])
             iy += lh
 
@@ -870,7 +892,7 @@ class ReportRenderer:
         channels = p.get('channels') or []
         if channels:
             T.add_text(slide, x, y, 3.0, 0.28,
-                       [('핵심 채널', T.BODY_BOLD, 11.5, T.BLUE_MAIN)])
+                       [('핵심 채널', T.BODY_BOLD, 11.0, T.BLUE_MAIN)])
             y += 0.34
             cx, chip_h = x, 0.34
             for name in channels[:12]:
@@ -909,7 +931,7 @@ class ReportRenderer:
                        T.BLUE_MAIN if idx == 0 else T.BLUE_SOFT, None, 0)
             label = f"Phase{idx + 1}. {ph.get('name', '')}".strip()
             T.add_text(slide, sx + 0.18, y + 0.16, seg - 0.40, 0.30,
-                       [(label, T.BODY_BOLD, 11.5, T.WHITE)])
+                       [(label, T.BODY_BOLD, 11.0, T.WHITE)])
 
         by = y + 0.74
         for idx, ph in enumerate(phases):

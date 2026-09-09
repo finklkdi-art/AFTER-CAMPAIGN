@@ -90,10 +90,16 @@ y 7.02   각주          x 0.38 · 8pt Body Light · #7F7F7F · "*" 로 시작
 산출물을 낸 뒤 아래를 돌릴 것.
 
 ```bash
-python Scripts/test_ppt_render.py && python Scripts/test_layout_overlap.py && python Scripts/test_text_safety.py && python Scripts/test_render_sim.py
+python Scripts/test_design_compliance.py && python Scripts/test_ppt_render.py && python Scripts/test_layout_overlap.py && python Scripts/test_text_safety.py && python Scripts/test_render_sim.py
 ```
 
-출고 전 자체 점검 항목은 `reference/design-system.md` §12 QA 체크리스트.
+**`test_design_compliance.py` 가 이 문서의 준수 여부를 기계로 판정한다.**
+산출물 PPTX 를 열어 캔버스·폰트·크기·색·헤더 3단·키메시지·전폭 패널·각주·
+표 헤더/합계/행높이를 좌표 단위로 대조하고 준수율을 낸다. 규격을 바꾸면
+이 검사도 함께 고칠 것 — 안 그러면 문서와 코드가 조용히 갈라진다.
+"디자인 시스템을 적용했다"는 주장은 이 검사 통과로만 확인할 것.
+
+출고 전 사람이 볼 항목은 `reference/design-system.md` §12 QA 체크리스트.
 
 ## 출처 표기
 

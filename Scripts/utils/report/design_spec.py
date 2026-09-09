@@ -246,6 +246,9 @@ def apply_masters(slide, *, doc_title: str, section: str, page: int, total: int,
       · 캠페인 태그 ｜ 섹션  → 괘선 → 셰브런 플래그 + 라벨
       · 키메시지 24pt Head Bold 중앙 정렬 (+ lead 를 sub 단락으로)
     """
+    # 전폭 콘텐츠 패널 — 운영 경로(renderer.render)와 같은 지면을 깔아야
+    # 두 경로의 산출물이 같은 문서로 읽힌다. 핸들러보다 먼저(z-order 최하단).
+    T.add_content_panel(slide)
     T.add_header(slide, doc_title, section)
     T.add_key_message(slide, [{'text': title, 'emph': True}],
                       sub=lead or None)
