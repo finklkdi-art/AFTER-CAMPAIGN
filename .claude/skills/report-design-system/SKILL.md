@@ -71,14 +71,19 @@ y 7.02   각주          x 0.38 · 8pt Body Light · #7F7F7F · "*" 로 시작
 
 | 대상 | 파일 |
 |---|---|
-| 토큰·컴포넌트·표·차트 헬퍼 | `Scripts/utils/report/theme.py` |
+| **토큰·컴포넌트·표·차트 헬퍼 (단일 출처)** | `Scripts/utils/report/theme.py` |
 | 슬라이드 블록 레지스트리 (21블록) | `Scripts/utils/report/blocks.py` |
 | 슬라이드별 렌더 | `Scripts/utils/report/renderer.py` |
+| 화면 미리보기 (같은 좌표계) | `Scripts/utils/slide_preview.py` |
+| cm 단위 어댑터 (상수 없음, theme 파생) | `Scripts/utils/report/design_spec.py` |
 | 폰트 설치 확인 | `Scripts/utils/report/fonts.py` |
 
-`theme.py` 의 상수·헬퍼가 이 디자인 시스템의 단일 출처임.
+`theme.py` 의 상수·헬퍼가 이 디자인 시스템의 **단일 출처**임.
 **슬라이드 코드에 좌표·색·폰트를 직접 쓰지 말고 `theme.py` 를 경유할 것.**
 새 값이 필요하면 `theme.py` 에 상수로 올린 뒤 쓸 것.
+
+`design_spec.py` 는 cm 단위를 쓰는 호출부(`test_ppt_render.py`)를 위한
+어댑터일 뿐이며 자체 상수를 갖지 않음 — 여기에 값을 새로 적지 말 것.
 
 ## 검증
 

@@ -1,20 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-디자인 시스템 (Design Spec) — 표본 PPTX 정밀 분석에서 추출한 상수·헬퍼.
+Design Spec — `theme.py` 의 cm 단위 어댑터.
 
-출처
-  Output/Samples/결과보고서_25년_시스템에어컨_인피니트&당일설치캠페인_1024.pptx
-  분석: scratchpad/analyze_sample.py (21장 · 도형·색·폰트·좌표 통계)
+2026.09.09 통합 (사용자 지시)
+  이 파일은 원래 표본 1종(시스템에어컨 1024)을 분석해 만든 **별개의**
+  디자인 시스템이었다. 그 결과 저장소에 PPTX 디자인 규격이 둘 존재했고,
+  `theme.py` 를 고쳐도 이 경로로 만든 덱은 그대로여서 변경이 반영되지 않은
+  것처럼 보이는 함정이 있었다.
 
-원칙
-  1. 정적 마스터  : 문서 브랜딩·제목 바 등 모든 장표 공통 요소는
-                    이 파일의 상수 좌표로 고정 (흔들림 방지)
-  2. 동적 컨텐츠 : 본문 영역은 BODY 좌표·거터 상수를 기반으로 그리드에
-                    비례 배치 (열 수에 따라 자동 분할)
-  3. 폰트         : `Samsung SS Head/Body KR` 만 허용.
-                    표본은 SamsungOneKoreanOTF 를 썼지만 프로젝트 규칙 우선.
-                    웨이트 매핑: 700C↔Bold · 500C↔Medium · 400C↔Regular ·
-                                  300C↔Light
+  이제 이 파일은 **상수를 스스로 갖지 않는다.** 좌표·색·폰트·크기는 전부
+  `theme.py` 에서 끌어와 cm 로 환산해 노출할 뿐이다. 규격을 바꿀 일이 있으면
+  `theme.py` 만 고치면 되고, 이 파일과 `test_ppt_render.py` 는 자동으로 따라온다.
+
+  공개 API(Master · Body · Palette · Font · Size · apply_masters ·
+  add_text_box · add_filled_rect · _set_run)는 호출부를 고치지 않도록
+  그대로 유지했다.
+
+단위 — `theme.py` 는 inch, 이 파일은 cm. `_cm()` 하나로만 환산한다.
 """
 from __future__ import annotations
 
@@ -23,51 +25,67 @@ from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.util import Cm, Pt
 
+from . import theme as T
 
-# ═══════════════════════════ 슬라이드 프레임 (16:9 와이드)
-# 표본 실측: 33.867 × 19.05 cm (정확히 SlideSize.WIDESCREEN)
-SLIDE_W_CM = 33.867
-SLIDE_H_CM = 19.05
+IN_TO_CM = 2.54
 
 
-# ═══════════════════════════ 정적 마스터 요소 (모든 장표 공통 고정 좌표)
-# 표본에서 90% 이상 반복 등장한 위치·크기를 그대로 채택.
+def _cm(inches: float) -> float:
+    """theme.py 의 inch 값을 cm 로."""
+    return inches * IN_TO_CM
+
+
+def _c(hex6: str) -> RGBColor:
+    return RGBColor.from_string(hex6)
+
+
+# ═══════════════════════════ 슬라이드 프레임 (theme.py 파생)
+SLIDE_W_CM = _cm(T.SLIDE_W)      # 33.866
+SLIDE_H_CM = _cm(T.SLIDE_H)      # 19.05
+
+
+# ═══════════════════════════ 마스터 요소 (theme.py 좌표를 cm 로)
 class Master:
-    # 좌상단 문서 브랜딩 (표본: -0.2, 0.7, 7.3×1.8, 90% 반복)
-    LOGO_LEFT_CM   = -0.2
-    LOGO_TOP_CM    = 0.7
-    LOGO_W_CM      = 7.3
-    LOGO_H_CM      = 1.8
+    """
+    헤더·키메시지의 실제 그리기는 `apply_masters()` 가 theme 컴포넌트에
+    위임한다. 아래 값은 호출부가 위치를 참조할 때만 쓴다.
+    """
+    # 캠페인 태그 (theme.TAG_POS)
+    LOGO_LEFT_CM = _cm(T.TAG_POS[0])
+    LOGO_TOP_CM = _cm(T.TAG_POS[1])
+    LOGO_W_CM = _cm(T.TAG_POS[2])
+    LOGO_H_CM = _cm(T.TAG_POS[3])
 
-    # 슬라이드 제목 바 (표본: 0.7, 3.1, 32.4×1.5)
-    TITLE_LEFT_CM  = 0.7
-    TITLE_TOP_CM   = 3.1
-    TITLE_W_CM     = 32.4
-    TITLE_H_CM     = 1.5
+    # 키메시지 (theme.KEY_POS) — 중앙 정렬 24pt
+    TITLE_LEFT_CM = _cm(T.KEY_POS[0])
+    TITLE_TOP_CM = _cm(T.KEY_POS[1])
+    TITLE_W_CM = _cm(T.KEY_POS[2])
+    TITLE_H_CM = _cm(T.KEY_POS[3])
 
-    # 부제(설명 문장) 텍스트 (표본: 3.6~4.0, 3.3~4.4, ~26.6×2.3)
-    LEAD_LEFT_CM   = 3.6
-    LEAD_TOP_CM    = 4.6
-    LEAD_W_CM      = 26.6
-    LEAD_H_CM      = 2.0
+    # 리드 문장은 키메시지 블록의 sub 단락으로 흡수됐다.
+    # 좌표만 남겨 두어 호출부가 참조해도 깨지지 않게 한다.
+    LEAD_LEFT_CM = TITLE_LEFT_CM
+    LEAD_TOP_CM = TITLE_TOP_CM + TITLE_H_CM
+    LEAD_W_CM = TITLE_W_CM
+    LEAD_H_CM = _cm(0.30)
 
-    # 페이지 번호 (표본에는 없음. 통일감을 위해 우측 하단에 고정 좌표 부여)
-    PAGENO_LEFT_CM = 31.4
-    PAGENO_TOP_CM  = 18.3
-    PAGENO_W_CM    = 2.2
-    PAGENO_H_CM    = 0.5
+    # 페이지 번호 — 각주 라인 우측 끝
+    PAGENO_W_CM = _cm(1.20)
+    PAGENO_H_CM = _cm(0.30)
+    PAGENO_LEFT_CM = SLIDE_W_CM - PAGENO_W_CM - _cm(0.38)
+    PAGENO_TOP_CM = _cm(T.FOOT_Y)
 
 
-# ═══════════════════════════ 본문 그리드 (동적 배치용)
+# ═══════════════════════════ 본문 그리드
 class Body:
     """
-    본문 영역은 여기 정의된 (LEFT, TOP, W, H) 사각형 안에서만 배치한다.
-    실제 열 수·행 수는 데이터의 양에 따라 자동 계산 (하드코딩 금지 — 규칙 3).
+    본문 영역. 상단은 theme 의 콘텐츠 존, 하단은 각주 라인에서 자동으로 온다.
+    열 수·행 수는 데이터 양에 따라 계산한다 (하드코딩 금지 — 프로젝트 규칙).
     """
-    LEFT_CM   = 2.4      # 표본에서 좌측 콘텐츠 정렬 기준
-    TOP_CM    = 6.7      # 부제 아래
-    RIGHT_CM  = 31.5     # 우측 안전 여백
-    BOTTOM_CM = 17.8     # 페이지 번호 위
+    LEFT_CM = _cm(0.49)                      # 표준 외곽 여백
+    TOP_CM = _cm(T.CONTENT_Y + 0.20)         # 콘텐츠 존 + 대괄호 라벨 자리
+    RIGHT_CM = SLIDE_W_CM - _cm(0.49)
+    BOTTOM_CM = _cm(T.FOOT_Y - 0.12)         # 각주 위 여유
 
     @classmethod
     def width_cm(cls) -> float:
@@ -78,92 +96,92 @@ class Body:
         return cls.BOTTOM_CM - cls.TOP_CM
 
     @classmethod
-    def columns(cls, n: int, gap_cm: float = 0.4):
-        """
-        본문 영역을 n개 균등 컬럼으로 분할해 [(left_cm, width_cm), ...] 반환.
-        데이터 개수에 맞춰 호출 (예: 매체 카드 3장 → columns(3)).
-        """
+    def columns(cls, n: int, gap_cm: float = _cm(0.08)):
+        """본문을 n 등분 → [(left_cm, width_cm), ...]. 거터 기본값은 실측 0.08in."""
         total = cls.width_cm()
         col_w = (total - gap_cm * (n - 1)) / n
         return [(cls.LEFT_CM + i * (col_w + gap_cm), col_w) for i in range(n)]
 
     @classmethod
     def rows(cls, n: int, gap_cm: float = 0.3):
-        """세로 방향 균등 분할 [(top_cm, height_cm), ...]"""
+        """세로 균등 분할 → [(top_cm, height_cm), ...]"""
         total = cls.height_cm()
         row_h = (total - gap_cm * (n - 1)) / n
         return [(cls.TOP_CM + i * (row_h + gap_cm), row_h) for i in range(n)]
 
 
-# ═══════════════════════════ 팔레트 (표본 채움색·글자색 상위)
+# ═══════════════════════════ 팔레트 (theme.py 파생)
 class Palette:
-    # 글자색 (표본: #404040 134회, #000000 99회, #0666D6 4회)
-    INK          = RGBColor(0x40, 0x40, 0x40)   # 본문 기본 (부드러운 먹)
-    INK_STRONG   = RGBColor(0x00, 0x00, 0x00)   # 강조 헤드라인
-    INK_MUTED    = RGBColor(0x6B, 0x6B, 0x6B)   # 캡션·부가정보
+    INK = _c(T.INK)                  # 본문 #404040
+    INK_STRONG = _c(T.BLACK)         # 제목·강조 #000000
+    INK_MUTED = _c(T.FOOT)           # 각주·캡션 #7F7F7F
 
-    # 액센트 (표본 파랑 계열)
-    ACCENT       = RGBColor(0x06, 0x66, 0xD6)   # 링크·강조
-    ACCENT_SOFT  = RGBColor(0x18, 0xA2, 0xFF)
-    FILL_STRONG  = RGBColor(0x00, 0x84, 0xDE)   # 표 헤더 등 진한 배경
+    ACCENT = _c(T.BLUE_SKY)          # #0096FF — 실측 시그니처 액센트
+    ACCENT_SOFT = _c(T.BLUE_LIGHT)   # #18A2FF
+    FILL_STRONG = _c('3E86D6')       # 매체 패널 헤더바 (흰 글자 전용)
 
-    # 밴드·표 배경
-    BAND_LIGHT   = RGBColor(0xE1, 0xF3, 0xFF)   # 부제 배경, 표 짝수행
-    BAND_MEDIUM  = RGBColor(0x98, 0xD5, 0xFC)
-    NEUTRAL_BG   = RGBColor(0xF8, 0xF9, 0xFD)   # 카드 바탕
-    BORDER       = RGBColor(0xCB, 0xD3, 0xDB)   # 표·카드 테두리
+    TBL_HEAD = _c(T.TBL_HEAD)        # #E1F3FF — 표 헤더 (검정 글자)
+    TOTAL_ROW = _c(T.TOTAL_ROW)      # #767171 — 합계 행 (흰 글자)
+    HILITE = _c(T.HILITE)            # #FEF5BE — 강조 셀
+    BAND_LIGHT = _c(T.TBL_HEAD)
+    BAND_MEDIUM = _c('98D5FC')
+    NEUTRAL_BG = _c(T.PANEL)         # #F8F9FD — 전폭 패널·카드 바탕
+    BORDER = _c(T.LINE_CARD)         # #D9D9D9 — 괘선·카드 테두리
+    WHITE = _c(T.WHITE)
 
-    # 상태색 (Checklist)
-    ALERT        = RGBColor(0xB3, 0x37, 0x2B)   # 에러
-    WARN         = RGBColor(0xA8, 0x76, 0x1C)   # 경고
-    OK           = RGBColor(0x1F, 0x6F, 0x4A)   # 정보
+    # 상태색 — Checklist 전용. 레퍼런스에 색 코딩은 없으나
+    # 이 화면은 광고주 보고가 아니라 기획자 확인용이라 예외로 둔다.
+    ALERT = _c(T.NEG)                # 미달·에러 #D96D77
+    WARN = _c('A8761C')
+    OK = _c('1F6F4A')
 
 
-# ═══════════════════════════ 타이포그래피 (표본 폰트 크기 상위)
+# ═══════════════════════════ 타이포그래피 (theme.py 파생)
 class Font:
-    # 폰트 웨이트 — Samsung SS Head/Body KR 만 사용
-    # 표본의 SamsungOneKoreanOTF 700C/500C/400C/300C 에 대응
-    HEAD_BOLD    = 'Samsung SS Head KR Bold'
-    HEAD_MEDIUM  = 'Samsung SS Head KR Medium'
-    HEAD_REGULAR = 'Samsung SS Head KR Regular'
-    BODY_BOLD    = 'Samsung SS Body KR Bold'
-    BODY_REGULAR = 'Samsung SS Body KR Regular'
-    BODY_LIGHT   = 'Samsung SS Body KR Light'
+    HEAD_BOLD = T.HEAD_BOLD
+    HEAD_MEDIUM = T.HEAD_MED
+    HEAD_REGULAR = T.HEAD_REG
+    HEAD_LIGHT = T.HEAD_LIGHT
+    BODY_BOLD = T.BODY_BOLD
+    BODY_REGULAR = T.BODY_REG
+    BODY_LIGHT = T.BODY_LIGHT
 
 
 class Size:
-    # 표본 실측 상위 8개 (24, 20, 14, 12, 10.5, 9, 8 pt)
-    TITLE       = Pt(24)   # 슬라이드 제목 바
-    HEADLINE    = Pt(20)   # 부제 상단 라인
-    SUBTITLE    = Pt(14)   # 부제·리드 문장
-    BODY        = Pt(12)   # 본문 텍스트
-    SMALL       = Pt(10.5) # 표 셀·주석
-    ANNOT       = Pt(9)    # 세부 주석
-    CAPTION     = Pt(8)    # 페이지 번호·자료원
+    COVER = Pt(T.SZ_COVER)          # 36
+    SECTION = Pt(T.SZ_SECTION)      # 28
+    TITLE = Pt(T.SZ_KEY)            # 24 — 키메시지
+    HEADLINE = Pt(T.SZ_KEY_SUB)     # 18 — 키커·부제
+    SUBTITLE = Pt(T.SZ_TAG)         # 16 — 태그·섹션 라벨
+    CARD_TITLE = Pt(T.SZ_CARD_TITLE)  # 14
+    BODY = Pt(T.SZ_BODY)            # 12
+    LABEL = Pt(T.SZ_LABEL)          # 11 — 대괄호 소제목
+    SMALL = Pt(T.SZ_TABLE)          # 10 — 표 셀
+    ANNOT = Pt(T.SZ_CHART)          # 9
+    CAPTION = Pt(T.SZ_FOOT)         # 8 — 각주·페이지 번호
 
 
-# ═══════════════════════════ 마스터 렌더러
+# ═══════════════════════════ 저수준 헬퍼
+
 def _set_run(run, text, *, font, size, color, bold=False):
     """
-    run 의 글꼴·크기·색·볼드를 한 번에.
+    런의 글꼴·크기·색을 지정한다. `theme.set_run_font()` 에 위임하므로
+    latin/ea/cs 세 typeface 가 함께 기록되고 bold 플래그는 제거된다.
 
-    🔴 볼드는 폰트 웨이트로 표현하는 것이 원칙 (Samsung SS 는 웨이트별
-    독립 패밀리로 등록됨). bold=True 는 폰트 이름을 'Bold' 로 승격시킨다.
+    (통합 전 이 함수는 `font.name` 만 설정해 **한글이 테마 폰트로 새는**
+     문제가 있었다. 위임으로 그 결함이 함께 사라진다.)
+
+    bold=True 는 폰트 이름을 같은 패밀리의 Bold 로 승격시킨다.
     """
     run.text = text
-    f = run.font
-    if bold and 'Bold' not in font:
-        # 폰트 이름에 Bold 승격
-        if font.endswith(' Regular'):
-            font = font[:-8] + ' Bold'
-        elif font.endswith(' Light') or font.endswith(' Medium'):
-            font = font.rsplit(' ', 1)[0] + ' Bold'
-        else:
-            font = font + ' Bold'
-    f.name = font
-    f.size = size
-    f.color.rgb = color
-    f.bold = False  # 항상 웨이트로 처리, PPT bold 플래그 사용 금지 (Rule Book)
+    face = font
+    if bold and not face.endswith('Bold'):
+        stem = face.rsplit(' ', 1)[0] if face.rsplit(' ', 1)[-1] in (
+            'Light', 'Regular', 'Medium') else face
+        face = stem + ' Bold'
+    pts = size.pt if hasattr(size, 'pt') else float(size)
+    hex6 = str(color) if not isinstance(color, str) else color
+    T.set_run_font(run, face, pts, hex6)
 
 
 def add_text_box(slide, left_cm, top_cm, w_cm, h_cm, *,
@@ -190,88 +208,45 @@ def add_text_box(slide, left_cm, top_cm, w_cm, h_cm, *,
 def add_filled_rect(slide, left_cm, top_cm, w_cm, h_cm,
                     fill_rgb, *, line_rgb=None, line_pt=0.5,
                     shape=MSO_SHAPE.RECTANGLE):
-    """도형 하나 그리고 채움·선 색 지정."""
+    """도형 하나 그리고 채움·선 색 지정. 그림자는 항상 끈다 (레퍼런스 0건)."""
     sh = slide.shapes.add_shape(shape, Cm(left_cm), Cm(top_cm),
                                 Cm(w_cm), Cm(h_cm))
+    sh.shadow.inherit = False
     sh.fill.solid()
     sh.fill.fore_color.rgb = fill_rgb
     if line_rgb is None:
-        sh.line.fill.background()   # 선 없음
+        sh.line.fill.background()
     else:
         sh.line.color.rgb = line_rgb
         sh.line.width = Pt(line_pt)
-    # 도형에 딸린 텍스트프레임의 기본 여백만 정리
     sh.text_frame.margin_left = sh.text_frame.margin_right = Cm(0.1)
     sh.text_frame.margin_top = sh.text_frame.margin_bottom = Cm(0.05)
     return sh
 
 
-# ─────────────────── 마스터: 좌상단 브랜딩 그룹
-def draw_master_logo(slide, doc_title: str, section: str = ''):
-    """
-    좌상단 브랜딩 영역 (표본 90% 반복 위치 그대로).
-    표본은 로고 이미지 그룹이지만, 우리는 이미지 자산이 없으므로
-    같은 좌표에 타이포그래피로 스타일라이즈한다.
-    """
-    box = add_text_box(slide, Master.LOGO_LEFT_CM + 0.3, Master.LOGO_TOP_CM,
-                       Master.LOGO_W_CM, Master.LOGO_H_CM, anchor='middle')
-    tf = box.text_frame
-    _set_run(tf.paragraphs[0].add_run(), doc_title,
-             font=Font.HEAD_BOLD, size=Pt(12), color=Palette.INK_STRONG)
-    if section:
-        p = tf.add_paragraph()
-        _set_run(p.add_run(), section,
-                 font=Font.BODY_REGULAR, size=Pt(8), color=Palette.INK_MUTED)
+# ═══════════════════════════ 마스터 렌더러 — theme 컴포넌트에 위임
 
-
-# ─────────────────── 마스터: 제목 바
-def draw_title_bar(slide, title_text: str):
-    """
-    슬라이드 제목 (표본: 0.7, 3.1, 32.4×1.5).
-    좌측에 얇은 액센트 바 + 제목 텍스트.
-    """
-    # 좌측 액센트 바
-    add_filled_rect(slide,
-                    Master.TITLE_LEFT_CM, Master.TITLE_TOP_CM + 0.15,
-                    0.15, Master.TITLE_H_CM - 0.3,
-                    Palette.ACCENT)
-    # 제목 텍스트
-    box = add_text_box(slide, Master.TITLE_LEFT_CM + 0.4, Master.TITLE_TOP_CM,
-                       Master.TITLE_W_CM - 0.4, Master.TITLE_H_CM,
-                       anchor='middle')
-    _set_run(box.text_frame.paragraphs[0].add_run(), title_text,
-             font=Font.HEAD_BOLD, size=Size.TITLE, color=Palette.INK_STRONG)
-
-
-# ─────────────────── 마스터: 부제(리드 문장)
-def draw_lead(slide, lead_text: str):
-    box = add_text_box(slide, Master.LEAD_LEFT_CM, Master.LEAD_TOP_CM,
-                       Master.LEAD_W_CM, Master.LEAD_H_CM, anchor='top')
-    tf = box.text_frame
-    for i, line in enumerate(lead_text.split('\n')):
-        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
-        p.alignment = PP_ALIGN.LEFT
-        _set_run(p.add_run(), line,
-                 font=Font.BODY_REGULAR, size=Size.SUBTITLE,
-                 color=Palette.INK)
-
-
-# ─────────────────── 마스터: 페이지 번호
 def draw_page_no(slide, page: int, total: int):
     box = add_text_box(slide, Master.PAGENO_LEFT_CM, Master.PAGENO_TOP_CM,
                        Master.PAGENO_W_CM, Master.PAGENO_H_CM,
                        anchor='middle', align='right')
     _set_run(box.text_frame.paragraphs[0].add_run(),
              f'{page:02d} / {total:02d}',
-             font=Font.BODY_REGULAR, size=Size.CAPTION,
-             color=Palette.INK_MUTED)
+             font=Font.BODY_LIGHT, size=Size.CAPTION, color=Palette.INK_MUTED)
 
 
 def apply_masters(slide, *, doc_title: str, section: str, page: int, total: int,
                   title: str, lead: str = ''):
-    """정적 마스터 4종을 한 번에 얹는다. 슬라이드 빌더에서 호출."""
-    draw_master_logo(slide, doc_title, section)
-    draw_title_bar(slide, title)
-    if lead:
-        draw_lead(slide, lead)
+    """
+    정적 마스터를 한 번에 얹는다.
+
+    2026.09.09 — 자체 구현(좌상단 로고 + 좌측 액센트 바 제목)을 버리고
+    `theme.add_header()` / `theme.add_key_message()` 로 위임했다. 이제
+    이 경로로 만든 덱도 운영 경로와 **글자 하나까지 같은 헤더 골격**을 갖는다.
+      · 캠페인 태그 ｜ 섹션  → 괘선 → 셰브런 플래그 + 라벨
+      · 키메시지 24pt Head Bold 중앙 정렬 (+ lead 를 sub 단락으로)
+    """
+    T.add_header(slide, doc_title, section)
+    T.add_key_message(slide, [{'text': title, 'emph': True}],
+                      sub=lead or None)
     draw_page_no(slide, page, total)

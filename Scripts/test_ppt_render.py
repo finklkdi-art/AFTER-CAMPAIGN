@@ -32,8 +32,9 @@ from pptx.enum.text import PP_ALIGN, MSO_ANCHOR                  # noqa: E402
 from pptx.oxml.ns import qn                                      # noqa: E402
 from lxml import etree                                           # noqa: E402
 
+from utils.report import theme as T                              # noqa: E402
 from utils.report.design_spec import (                           # noqa: E402
-    SLIDE_W_CM, SLIDE_H_CM,
+    SLIDE_W_CM, SLIDE_H_CM, _cm,
     Body, Font, Palette, Size,
     apply_masters, add_filled_rect, add_text_box, _set_run,
 )
@@ -240,9 +241,12 @@ def slide_media_and_insight(prs):
     table_w = Body.width_cm() * 0.62
     table_left = Body.LEFT_CM
     table_top = Body.TOP_CM
-    table_h = 6.5
 
+    # 행 높이는 theme 의 사다리에서 고른다 — 임의 높이를 쓰면 실측 규격
+    # (8행 이하 0.403in) 을 벗어난다.
     n_rows = len(MEDIA_ROWS) + 1
+    row_h_cm = _cm(T.row_height_for(n_rows))
+    table_h = row_h_cm * n_rows
     n_cols = len(MEDIA_HEADERS)
     tbl_shape = slide.shapes.add_table(
         n_rows, n_cols, Cm(table_left), Cm(table_top),
@@ -257,30 +261,31 @@ def slide_media_and_insight(prs):
         tbl.columns[i].width = Cm(other_w)
 
     def style_cell(cell, text, *, header=False, total=False):
+        # 헤더는 옅게(검정 글자), 합계는 진하게(흰 글자) — 실측 규격.
+        # 통합 전에는 이 둘이 반대였다: 헤더가 진한 파랑에 흰 글자,
+        # 합계가 옅은 하늘색. 17열까지 늘어나는 표에서 진한 헤더는
+        # 잉크를 먹고 수치 가독성을 떨어뜨린다 (design-system §6).
         cell.margin_left = cell.margin_right = Cm(0.1)
         cell.margin_top = cell.margin_bottom = Cm(0.05)
         cell.fill.solid()
         if header:
-            cell.fill.fore_color.rgb = Palette.FILL_STRONG
+            cell.fill.fore_color.rgb = Palette.TBL_HEAD
         elif total:
-            cell.fill.fore_color.rgb = Palette.BAND_LIGHT
+            cell.fill.fore_color.rgb = Palette.TOTAL_ROW
         else:
-            cell.fill.fore_color.rgb = RGBColor_from_hex('FFFFFF')
+            cell.fill.fore_color.rgb = Palette.WHITE
+
+        if header:
+            face, color = Font.HEAD_MEDIUM, Palette.INK_STRONG
+        elif total:
+            face, color = Font.HEAD_MEDIUM, Palette.WHITE
+        else:
+            face, color = Font.BODY_REGULAR, Palette.INK_STRONG
 
         tf = cell.text_frame
         tf.paragraphs[0].alignment = PP_ALIGN.LEFT if header else PP_ALIGN.RIGHT
-        run = tf.paragraphs[0].add_run()
-        _set_run(run, text,
-                 font=Font.BODY_BOLD if (header or total) else Font.BODY_REGULAR,
-                 size=Size.SMALL,
-                 color=RGBColor_white_for_header() if header
-                       else Palette.INK_STRONG)
-        # 첫 열은 좌측 정렬
-        if header:
-            pass
-        elif cell == cell:   # nothing else
-
-            pass
+        _set_run(tf.paragraphs[0].add_run(), text,
+                 font=face, size=Size.SMALL, color=color)
 
     # 헤더
     for j, h in enumerate(MEDIA_HEADERS):
